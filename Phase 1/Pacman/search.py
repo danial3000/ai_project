@@ -55,9 +55,23 @@ class SearchProblem:
 
 
 def depthFirstSearch(problem):
+    q = util.Queue()
+    empty_action_list = []
+    visited = set()
+    q.push((problem.getStartState(), empty_action_list))
+    visited.add(problem.getStartState())
+    while not q.isEmpty():
+        current_node, list_of_actions = q.pop()
+        if problem.isGoalState(current_node):
+            return list_of_actions
+        for info in problem.getSuccessors(current_node):
+            successor, action, step_cost = info
+            if successor not in visited:
+                new_list = list_of_actions + [action]
+                q.push((successor, new_list))
+                visited.add(successor)
 
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    return empty_action_list
 
 
 def breadthFirstSearch(problem):
