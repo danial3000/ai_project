@@ -4,7 +4,7 @@
 # educational purposes provided that (1) you do not distribute or publish
 # solutions, (2) you retain this notice, and (3) you provide clear
 # attribution to UC Berkeley, including a link to http://ai.berkeley.edu.
-# 
+#
 # Attribution Information: The Pacman AI projects were developed at UC Berkeley.
 # The core projects and autograders were primarily created by John DeNero
 # (denero@cs.berkeley.edu) and Dan Klein (klein@cs.berkeley.edu).
@@ -55,7 +55,7 @@ class SearchProblem:
 
 
 def depthFirstSearch(problem):
-    q = util.Queue()
+    q = util.Stack()
     empty_action_list = []
     visited = set()
     q.push((problem.getStartState(), empty_action_list))
@@ -124,9 +124,29 @@ def nullHeuristic(state, problem=None):
 
 
 def aStarSearch(problem, heuristic=nullHeuristic):
+    from searchAgents import cornersHeuristic
+    heuristic = cornersHeuristic
+    priority_queue = util.PriorityQueue()
+    start_state = problem.getStartState()
+    priority_queue.push((start_state, []), 0)
+    visited = set()
 
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    while not priority_queue.isEmpty():
+        state, actions = priority_queue.pop()
+
+        if problem.isGoalState(state):
+            return actions
+
+        if state not in visited:
+            visited.add(state)
+
+            successors = problem.getSuccessors(state)
+            for successor, action, cost in successors:
+                if successor not in visited:
+                    new_cost = problem.getCostOfActions(actions + [action])
+                    priority_queue.push((successor, actions + [action]), new_cost + heuristic(successor, problem))
+
+    return []
 
 
 # Abbreviations
