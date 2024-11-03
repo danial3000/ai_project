@@ -2,7 +2,6 @@
 # importing libraries
 #%%
 import matplotlib.pyplot as plt
-%matplotlib inline
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -63,8 +62,10 @@ sns.heatmap(correlation_matrix, annot=True, fmt=".2f")
 plt.title("Correlation Heatmap")
 plt.show()
 #%% md
-# as we saw, there is no correlation between values so we should extract features by multiplying in 'feature.ipynb' notebook
+# 
 #%% md
+# as we saw, there is no correlation between values so we should extract features by multiplying in 'feature.ipynb' notebook
+# 
 # as the 'DeterioratingInfrastructure' times the other column was made a better correlation, we multiply all column to it and insert a 
 #%%
 def add_new_features(input_data, effective_column="DeterioratingInfrastructure"):
@@ -73,6 +74,8 @@ def add_new_features(input_data, effective_column="DeterioratingInfrastructure")
         if col != effective_column and col != "FloodProbability":
             new_data[effective_column + '-' + col] = input_data[col] * input_data[effective_column]
     return new_data
+#%% md
+# 2 scaler function, both used for scaling datasets
 #%%
 def z_score_scaler(df):
     mean = df.mean()
@@ -85,6 +88,8 @@ def min_max_scaler(df):
     max_val = df.max()
     scaled_df = (df - min_val) / (max_val - min_val) 
     return scaled_df, min_val, max_val
+#%% md
+# first fill data if there is NaN value, then create 4 dataset based on scaling and 
 #%%
 def create_datasets(input_data):
     if input_data.isnull().values.any():
@@ -96,8 +101,12 @@ def create_datasets(input_data):
     train_z, train_z_mean, train_z_std = z_score_scaler(input_data)
     train_m, train_m_min, train_m_max = min_max_scaler(input_data)
     return [tfp_z, tfp_m, train_z, train_m], [[tpf_z_mean, tpf_z_std], [tpf_m_min, tpf_m_max], [train_z_mean, train_z_std], [train_m_min, train_m_max]]
+#%% md
+# defining datasets list a scalers list that contain parameters of scaling 
 #%%
 datasets, scalers = create_datasets(train)
+#%% md
+# dropping 'id' column as it's random, unique and categorical and severance independent variables from dependent
 #%%
 xs = []
 ys = []
@@ -107,12 +116,18 @@ for data in datasets:
     x = data.drop(['FloodProbability'], axis=1).to_numpy()
     xs.append(x)
 xs[0]
+#%% md
+# getting dataset rows and columns
 #%%
 xs[1].shape
+#%% md
+# defining start point (it could be random!)
 #%%
 weights = [np.full(xs[i].shape[1], 0.0, dtype=np.float64) for i in range(len(datasets))]
 biases = [0.0 for i in range(len(datasets))]
 weights
+#%% md
+# linear regression function explained by comments in code
 #%%
 def linear_regression(epochs_number, initial_learning_rate, intercept, slope, x_train, y_train, momentum=0,
                       patience=np.inf, regularization_param=0, lr_decrease=1, iteration_sample=10000):
@@ -121,19 +136,19 @@ def linear_regression(epochs_number, initial_learning_rate, intercept, slope, x_
     mae_serie = []
     learning_rate_serie = []
 
-    # Initialize previous gradients for momentum
+    # initialize momentum
     slope_velocity = np.zeros(columns)
     intercept_velocity = 0
 
-    # For early stopping
+    # early stopping param
     best_mse = float('inf')
     patience_counter = 0
-
-    # Initial learning rate
+    
+    # learning rate
     learning_rate = initial_learning_rate
     total_epoch = epochs_number
     
-    # Track per-iteration MSE and MAE for sampling every `iteration_sample` iterations
+    # per iteration mse and mae sampling
     mse_per_iteration = []
     mae_per_iteration = []
     sampled_mse = []
@@ -143,35 +158,40 @@ def linear_regression(epochs_number, initial_learning_rate, intercept, slope, x_
     for epoch in range(epochs_number):
         total_mse = 0
         total_mae = 0
-
+        
+        # shuffle data in each epoch
+        permutation = np.random.permutation(rows)
+        x_train = x_train[permutation]
+        y_train = y_train[permutation]
+        
         for i in range(rows):
             selected_row = x_train[i, :]
             prediction = np.dot(selected_row, slope) + intercept
             real = y_train[i]
 
-            # Calculate gradients with L2 regularization for the slope (not for intercept)
+            # gradients with L2 regularization for the slope (not for intercept)
             slope_gradient = selected_row * (prediction - real) * 2 + regularization_param * slope
             intercept_gradient = (prediction - real) * 2
 
-            # Apply momentum
+            # calculate momentum
             slope_velocity = momentum * slope_velocity + learning_rate * slope_gradient
             intercept_velocity = momentum * intercept_velocity + learning_rate * intercept_gradient
 
-            # Update parameters
+            # update parameters
             slope -= slope_velocity
             intercept -= intercept_velocity
 
-            # Calculate errors for MSE and MAE
+            # errors for mse and mae
             iteration_mse = (prediction - real) ** 2
             iteration_mae = abs(prediction - real)
             total_mse += iteration_mse
             total_mae += iteration_mae
 
-            # Store per-iteration errors
+            # per iteration mse and mae
             mse_per_iteration.append(iteration_mse)
             mae_per_iteration.append(iteration_mae)
 
-            # Check early stopping and sampling every `iteration_sample` iterations
+            # sampling mse and mae
             if (iteration_counter + 1) % iteration_sample == 0:
                 current_sample_mse = np.mean(mse_per_iteration)
                 sampled_mse.append(current_sample_mse)
@@ -179,7 +199,11 @@ def linear_regression(epochs_number, initial_learning_rate, intercept, slope, x_
                 mse_per_iteration = []
                 mae_per_iteration = []
                 
-                # Early stopping condition on sample intervals
+                # learning rate decrease
+                learning_rate *= lr_decrease
+                learning_rate_serie.append(learning_rate)
+                
+                # early stopping
                 if current_sample_mse < best_mse:
                     best_mse = current_sample_mse
                     patience_counter = 0
@@ -192,62 +216,60 @@ def linear_regression(epochs_number, initial_learning_rate, intercept, slope, x_
                         
             iteration_counter += 1
         
-        # Calculate average errors for the epoch
+        # average error for the epoch
         mse_val = total_mse / rows
         mae_val = total_mae / rows
         mse_serie.append(mse_val)
         mae_serie.append(mae_val)
 
-        # Learning rate decay
-        learning_rate *= lr_decrease
-        learning_rate_serie.append(learning_rate)
+        
 
-        # Break loop if early stopping was triggered within the iteration loop
+        # break loop if early stopped
         if patience_counter >= patience:
             break
     
-    # Plot MSE and MAE over epochs in separate figures
+    # plotting
     
-    # Combine all plots into a single figure with subplots.
+    # combine subplot
     fig, axs = plt.subplots(3, 2, figsize=(15, 12))
     fig.suptitle("Training Metrics Over Epochs and Iterations")
 
-    # Plot MSE per Epoch
+    # mse per epoch
     axs[0, 0].plot(range(total_epoch), mse_serie, label='MSE per Epoch', color='blue')
     axs[0, 0].set_xlabel('Epoch')
     axs[0, 0].set_ylabel('MSE')
     axs[0, 0].set_title('MSE per Epoch')
     axs[0, 0].legend()
 
-    # Plot MAE per Epoch
+    # mae per epoch
     axs[0, 1].plot(range(total_epoch), mae_serie, label='MAE per Epoch', color='orange')
     axs[0, 1].set_xlabel('Epoch')
     axs[0, 1].set_ylabel('MAE')
     axs[0, 1].set_title('MAE per Epoch')
     axs[0, 1].legend()
 
-    # Plot Sampled MSE per Iteration
+    # mse per sample iter
     axs[1, 0].plot(range(len(sampled_mse)), sampled_mse, label=f'MSE (Sampled every {iteration_sample} Iterations)', color='purple')
     axs[1, 0].set_xlabel(f'Sample Interval ({iteration_sample} Iterations)')
     axs[1, 0].set_ylabel('Sampled MSE')
     axs[1, 0].set_title(f'Sampled MSE per {iteration_sample} Iterations')
     axs[1, 0].legend()
 
-    # Plot Sampled MAE per Iteration
+    # mae per sample iter
     axs[1, 1].plot(range(len(sampled_mae)), sampled_mae, label=f'MAE (Sampled every {iteration_sample} Iterations)', color='green')
     axs[1, 1].set_xlabel(f'Sample Interval ({iteration_sample} Iterations)')
     axs[1, 1].set_ylabel('Sampled MAE')
     axs[1, 1].set_title(f'Sampled MAE per {iteration_sample} Iterations')
     axs[1, 1].legend()
 
-    # Plot Learning Rate over Epochs
-    axs[2, 0].plot(range(total_epoch), learning_rate_serie, label='Learning Rate per Epoch', color='red')
-    axs[2, 0].set_xlabel('Epoch')
-    axs[2, 0].set_ylabel('Learning Rate')
-    axs[2, 0].set_title('Learning Rate per Epoch')
+    # learning rate per iter
+    axs[2, 0].plot(range(len(learning_rate_serie)), learning_rate_serie, label='Learning Rate per Epoch', color='red')
+    axs[1, 0].set_xlabel(f'Sample Interval ({iteration_sample} Iterations)')
+    axs[2, 0].set_ylabel('Sampled Learning Rate')
+    axs[2, 0].set_title(f'Sampled Learning Rate per {iteration_sample} Iterations')
     axs[2, 0].legend()
 
-    # Remove the empty subplot
+    # remove empty subplot
     fig.delaxes(axs[2, 1])
 
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
@@ -255,15 +277,20 @@ def linear_regression(epochs_number, initial_learning_rate, intercept, slope, x_
 
     return slope, intercept
 
+#%% md
+# training model in the base mode
 #%%
 epochs = 5
 result_w = weights.copy()
 result_b = biases.copy()
 for i in range(len(datasets)):
     result_w[i], result_b[i] = linear_regression(epochs, 0.001, biases[i], weights[i], xs[i], ys[i])
+#%% md
+# checking slope values
 #%%
-
 result_w
+#%% md
+# predict function calculates scores
 #%%
 def predict(x_test, y_test, slope, intercept):
     y_predicted = np.dot(x_test, slope) + intercept
@@ -274,17 +301,20 @@ def predict(x_test, y_test, slope, intercept):
     print(f"Mean Squared Error: {mse}")
     print(f"R2 Score: {r2}")
     return y_predicted
+#%% md
+# calculate scores for train itself
 #%%
-predicted = []
 for i in range(len(datasets)):
-    predicted.append(predict(xs[i], ys[i], result_w[i], result_b[i]))
+    predict(xs[i], ys[i], result_w[i], result_b[i])
 
+#%% md
+# loading test file
 #%%
 test = pd.read_csv("test.csv")
-test.head()
-#%%
 test = test.drop(columns=['id'])
-
+test.head()
+#%% md
+# scaler function for known scale values
 #%%
 def z_score_scaler_test(input_data, mean, std):
     scaled_df = (input_data - mean) / std
@@ -293,6 +323,8 @@ def z_score_scaler_test(input_data, mean, std):
 def min_max_scaler_test(input_data, min_val, max_val):
     scaled_df = (input_data - min_val) / (max_val - min_val) 
     return scaled_df
+#%% md
+# creating test datasets as train
 #%%
 
 def create_test_datasets(input_data, scaler):
@@ -305,6 +337,8 @@ def create_test_datasets(input_data, scaler):
     train_z = z_score_scaler_test(input_data, scaler[2][0], scaler[2][1])
     train_m = min_max_scaler_test(input_data,scaler[3][0], scaler[3][1])
     return [tfp_z, tfp_m, train_z, train_m]
+#%% md
+# severance dependent and independent variables
 #%%
 test_datasets = create_test_datasets(test, scalers)
 print(test_datasets)
@@ -315,10 +349,13 @@ for data in test_datasets:
     ys_test.append(y)
     x = data.drop(['FloodProbability'], axis=1).to_numpy()
     xs_test.append(x)
+#%% md
+# calculating test scores on the trained model
 #%%
-predicted_test = []
 for i in range(len(datasets)):
-    predicted_test.append(predict(xs_test[i], ys_test[i], result_w[i], result_b[i]))
+    predict(xs_test[i], ys_test[i], result_w[i], result_b[i])
+#%% md
+# creating a new model and train it by extra features like early stopping, momentum, and learning rate decrease and calculating the score
 #%%
 weights2 = [np.full(xs[i].shape[1], 0.0, dtype=np.float64) for i in range(len(datasets))]
 biases2 = [0.0 for i in range(len(datasets))]
@@ -327,10 +364,9 @@ epochs = 20
 result_w2 = weights2.copy()
 result_b2 = biases2.copy()
 for i in range(len(datasets)):
-    result_w2[i], result_b2[i]= linear_regression(epochs_number=epochs, initial_learning_rate=0.0001, intercept=biases2[i], slope=weights2[i], x_train=xs[i], y_train=ys[i], momentum=0.5, patience=20, regularization_param=0.0, lr_decrease=.90, iteration_sample=10000)
+    result_w2[i], result_b2[i]= linear_regression(epochs_number=epochs, initial_learning_rate=0.0001, intercept=biases2[i], slope=weights2[i], x_train=xs[i], y_train=ys[i], momentum=0.5, patience=20, regularization_param=0.0, lr_decrease=.99, iteration_sample=10000)
     
 
 predicted_test2 = []
 for i in range(len(datasets)):
     predicted_test2.append(predict(xs_test[i], ys_test[i], result_w2[i], result_b2[i]))
-#%%
