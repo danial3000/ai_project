@@ -148,6 +148,20 @@ def aStarSearch(problem, heuristic=nullHeuristic):
 
     return []
 
+'''
+def cornersHeuristic(state, problem):
+    position, corner = state
+    corners = problem.corners
+    unseens = [corner1 for i, corner1 in enumerate(corners) if not corner[i]]
+
+    if len(unseens) == 0:
+        return 0
+    sum1 = 0
+    for current_corner in unseens:
+        sum1 = sum1 + util.manhattanDistance(position, current_corner)
+    return sum1 * len(unseens) * 2
+'''
+
 
 # Abbreviations
 bfs = breadthFirstSearch
