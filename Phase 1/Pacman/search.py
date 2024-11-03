@@ -124,7 +124,6 @@ def nullHeuristic(state, problem=None):
 
 
 def aStarSearch(problem, heuristic=nullHeuristic):
-    from searchAgents import cornersHeuristic
     heuristic = cornersHeuristic
     priority_queue = util.PriorityQueue()
     start_state = problem.getStartState()
@@ -148,7 +147,6 @@ def aStarSearch(problem, heuristic=nullHeuristic):
 
     return []
 
-'''
 def cornersHeuristic(state, problem):
     position, corner = state
     corners = problem.corners
@@ -160,7 +158,6 @@ def cornersHeuristic(state, problem):
     for current_corner in unseens:
         sum1 = sum1 + util.manhattanDistance(position, current_corner)
     return sum1 * len(unseens) * 2
-'''
 
 
 # Abbreviations
