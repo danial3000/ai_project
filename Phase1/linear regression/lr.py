@@ -75,7 +75,7 @@ def add_new_features(input_data, effective_column="DeterioratingInfrastructure")
             new_data[effective_column + '-' + col] = input_data[col] * input_data[effective_column]
     return new_data
 #%% md
-# 2 scaler function, both used for scaling datasets
+# 2 scaler functions, both used for scaling datasets
 #%%
 def z_score_scaler(df):
     mean = df.mean()
