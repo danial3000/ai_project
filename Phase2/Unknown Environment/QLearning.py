@@ -1,41 +1,56 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-
 class QLearning():
-    def __init__(self, env):
+
+    def __init__(self, env, learningRate=0.1, discountFactor=0.8, epsilonGreedy=0.99, decayRate=0.99):
         self.env = env
-        self.option = 4
-        self.dimension = 8
-        self.qTable = np.zeros((self.dimension, self.dimension, self.option))
-        self.qTable[7, 7, :] = 400
-        self.qPolicy = np.zeros((self.dimension, self.dimension), dtype=np.int64)
-        self.learningRate = .5
-        self.discountFactor = 0.5
-        self.epsilonGreedy = 0.99
-        self.decayRate = .99
+        self.opt = 4
+        self.dim = 8
+
+        self.learningRate = learningRate
+        self.discountFactor = discountFactor
+        self.epsilonGreedy = epsilonGreedy
+        self.decayRate = decayRate
+
+        self.qTable = np.zeros((self.dim, self.dim, self.opt))
+        self.qPolicy = np.zeros((self.dim, self.dim), dtype=np.int64)
+
+
+    def episode(self):
+
+        state = self.env.reset()
+        total_rewards = 0
+        done = False
+        while not done:
+            if np.random.rand() <= self.epsilonGreedy:
+                action = np.random.choice([0, 1, 2, 3])
+            else:
+                action = np.argmax(self.qTable[state])
+
+            next_state, reward, done = self.env.step(action)
+            total_rewards += reward
+
+            next_reward = np.max(self.qTable[next_state[0], next_state[1]]) if not done else 0
+            self.qTable[state[0], state[1], action] += self.learningRate * (
+                    reward
+                    + self.discountFactor * next_reward
+                    - self.qTable[state[0], state[1], action]
+            )
+
+            state = next_state
+            self.epsilonGreedy = max(0.1, self.epsilonGreedy * self.decayRate)
+        return total_rewards
 
     def explore(self, episodes):
+        rewards = []
         for episode in range(episodes):
-            state = self.env.reset()
-            step = 0
-            reward = 0
-            done = False
-            while not done:
-                if np.random.rand() <= self.epsilonGreedy:
-                    action = np.random.choice([0, 1, 2, 3])
-                else:
-                    action = np.argmax(self.qTable[state])
-                next_state, new_reward, done = self.env.step(action)
-                self.qTable[state[0], state[1], action] += self.learningRate * (
-                        reward
-                        + self.discountFactor * np.max(self.qTable[next_state[0], next_state[1]])  # Future reward
-                        - self.qTable[state[0], state[1], action]  # Current Q-value
-                )
-                reward = new_reward
-                state = next_state
-                step += 1
+            episode_reward = self.episode()
+            rewards.append(episode_reward)
+
             self.epsilonGreedy = max(0.1, self.epsilonGreedy * self.decayRate)
+
+        return rewards
 
     def setPolicy(self):
         self.qPolicy = np.argmax(self.qTable, axis=2)

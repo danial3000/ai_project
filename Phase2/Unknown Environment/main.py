@@ -1,4 +1,3 @@
-import numpy as np
 import pygame
 from environment import UnknownAngryBirds, PygameInit
 
@@ -11,7 +10,7 @@ if __name__ == "__main__":
     FPS = 10
 
     ql = QLearning(env)
-    ql.explore(2000)
+    ql.explore(1000)
     policy = ql.setPolicy()
     state = env.reset()
 
