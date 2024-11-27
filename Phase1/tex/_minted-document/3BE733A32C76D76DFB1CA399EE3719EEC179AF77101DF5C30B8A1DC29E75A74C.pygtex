@@ -1,0 +1,17 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{n}{q} \PYG{o}{=} \PYG{n}{util}\PYG{o}{.}\PYG{n}{Queue}\PYG{p}{()}
+\PYG{n}{empty\PYGZus{}action\PYGZus{}list} \PYG{o}{=} \PYG{p}{[]}
+\PYG{n}{visited} \PYG{o}{=} \PYG{n+nb}{set}\PYG{p}{()}
+\PYG{n}{q}\PYG{o}{.}\PYG{n}{push}\PYG{p}{((}\PYG{n}{problem}\PYG{o}{.}\PYG{n}{getStartState}\PYG{p}{(),} \PYG{n}{empty\PYGZus{}action\PYGZus{}list}\PYG{p}{))}
+\PYG{n}{visited}\PYG{o}{.}\PYG{n}{add}\PYG{p}{(}\PYG{n}{problem}\PYG{o}{.}\PYG{n}{getStartState}\PYG{p}{())}
+\PYG{k}{while} \PYG{o+ow}{not} \PYG{n}{q}\PYG{o}{.}\PYG{n}{isEmpty}\PYG{p}{():}
+    \PYG{n}{current\PYGZus{}node}\PYG{p}{,} \PYG{n}{list\PYGZus{}of\PYGZus{}actions} \PYG{o}{=} \PYG{n}{q}\PYG{o}{.}\PYG{n}{pop}\PYG{p}{()}
+    \PYG{k}{if} \PYG{n}{problem}\PYG{o}{.}\PYG{n}{isGoalState}\PYG{p}{(}\PYG{n}{current\PYGZus{}node}\PYG{p}{):}
+        \PYG{k}{return} \PYG{n}{list\PYGZus{}of\PYGZus{}actions}
+    \PYG{k}{for} \PYG{n}{info} \PYG{o+ow}{in} \PYG{n}{problem}\PYG{o}{.}\PYG{n}{getSuccessors}\PYG{p}{(}\PYG{n}{current\PYGZus{}node}\PYG{p}{):}
+        \PYG{n}{successor}\PYG{p}{,} \PYG{n}{action}\PYG{p}{,} \PYG{n}{step\PYGZus{}cost} \PYG{o}{=} \PYG{n}{info}
+        \PYG{k}{if} \PYG{n}{successor} \PYG{o+ow}{not} \PYG{o+ow}{in} \PYG{n}{visited}\PYG{p}{:}
+            \PYG{n}{new\PYGZus{}list} \PYG{o}{=} \PYG{n}{list\PYGZus{}of\PYGZus{}actions} \PYG{o}{+} \PYG{p}{[}\PYG{n}{action}\PYG{p}{]}
+            \PYG{n}{q}\PYG{o}{.}\PYG{n}{push}\PYG{p}{((}\PYG{n}{successor}\PYG{p}{,} \PYG{n}{new\PYGZus{}list}\PYG{p}{))}
+            \PYG{n}{visited}\PYG{o}{.}\PYG{n}{add}\PYG{p}{(}\PYG{n}{successor}\PYG{p}{)}
+\end{Verbatim}

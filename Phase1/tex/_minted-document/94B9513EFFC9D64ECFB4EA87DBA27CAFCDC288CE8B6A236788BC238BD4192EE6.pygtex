@@ -1,0 +1,45 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYGZsh{}DFS
+[SearchAgent] using function dfs
+[SearchAgent] using problem type CornersProblem
+Path found with total cost of 32 in 0.0 seconds
+Search nodes expanded: 185
+Pacman emerges victorious! Score: 478
+Average Score: 478.0
+Scores:        478.0
+Win Rate:      1/1 (1.00)
+Record:        Win
+
+\PYGZsh{}BFS
+[SearchAgent] using function bfs
+[SearchAgent] using problem type CornersProblem
+Path found with total cost of 20 in 0.0 seconds
+Search nodes expanded: 225
+Pacman emerges victorious! Score: 490
+Average Score: 490.0
+Scores:        490.0
+Win Rate:      1/1 (1.00)
+Record:        Win
+
+\PYGZsh{}UCS
+[SearchAgent] using function ucs
+[SearchAgent] using problem type CornersProblem
+Path found with total cost of 20 in 0.0 seconds
+Search nodes expanded: 225
+Pacman emerges victorious! Score: 490
+Average Score: 490.0
+Scores:        490.0
+Win Rate:      1/1 (1.00)
+Record:        Win
+
+\PYGZsh{}ASTAR
+[SearchAgent] using function astar and heuristic nullHeuristic
+[SearchAgent] using problem type CornersProblem
+Path found with total cost of 20 in 0.0 seconds
+Search nodes expanded: 23
+Pacman emerges victorious! Score: 490
+Average Score: 490.0
+Scores:        490.0
+Win Rate:      1/1 (1.00)
+Record:        Win
+\end{Verbatim}

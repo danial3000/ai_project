@@ -1,0 +1,12 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+ \PYG{n}{position}\PYG{p}{,} \PYG{n}{corner} \PYG{o}{=} \PYG{n}{state}
+ \PYG{n}{corners} \PYG{o}{=} \PYG{n}{problem}\PYG{o}{.}\PYG{n}{corners}
+ \PYG{n}{unseens} \PYG{o}{=} \PYG{p}{[}\PYG{n}{corner1} \PYG{k}{for} \PYG{n}{i}\PYG{p}{,} \PYG{n}{corner1} \PYG{o+ow}{in} \PYG{n+nb}{enumerate}\PYG{p}{(}\PYG{n}{corners}\PYG{p}{)} \PYG{k}{if} \PYG{o+ow}{not} \PYG{n}{corner}\PYG{p}{[}\PYG{n}{i}\PYG{p}{]]}
+
+ \PYG{k}{if} \PYG{n+nb}{len}\PYG{p}{(}\PYG{n}{unseens}\PYG{p}{)} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{:}
+     \PYG{k}{return} \PYG{l+m+mi}{0}
+ \PYG{n}{sum1} \PYG{o}{=} \PYG{l+m+mi}{0}
+ \PYG{k}{for} \PYG{n}{current\PYGZus{}corner} \PYG{o+ow}{in} \PYG{n}{unseens}\PYG{p}{:}
+     \PYG{n}{sum1} \PYG{o}{=} \PYG{n}{sum1} \PYG{o}{+} \PYG{n}{util}\PYG{o}{.}\PYG{n}{manhattanDistance}\PYG{p}{(}\PYG{n}{position}\PYG{p}{,} \PYG{n}{current\PYGZus{}corner}\PYG{p}{)}
+ \PYG{k}{return} \PYG{n}{sum1} \PYG{o}{*} \PYG{n+nb}{len}\PYG{p}{(}\PYG{n}{unseens}\PYG{p}{)} \PYG{o}{*} \PYG{l+m+mi}{2}
+\end{Verbatim}

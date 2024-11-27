@@ -1,0 +1,28 @@
+\contentsline {chapter}{\numberline {1}Pacman}{1}{chapter.1}%
+\contentsline {section}{\numberline {1.1}توابع جستجوی مسیر}{1}{section.1.1}%
+\contentsline {subsection}{\numberline {1.1.1}تابع عمق اول}{1}{subsection.1.1.1}%
+\contentsline {subsection}{\numberline {1.1.2}تابع عرض اول}{2}{subsection.1.1.2}%
+\contentsline {subsection}{\numberline {1.1.3}تابع هزینه‌یابی یکنواخت}{2}{subsection.1.1.3}%
+\contentsline {subsection}{\numberline {1.1.4}تابع \lr {$A^{\star }$}}{3}{subsection.1.1.4}%
+\contentsline {section}{\numberline {1.2}خروجی توابع}{4}{section.1.2}%
+\contentsline {subsection}{\numberline {1.2.1}محیط ساده}{4}{subsection.1.2.1}%
+\contentsline {subsection}{\numberline {1.2.2}محیط سخت}{5}{subsection.1.2.2}%
+\contentsline {subsection}{\numberline {1.2.3}محیط بزرگ}{6}{subsection.1.2.3}%
+\contentsline {chapter}{\numberline {2}رگرسیون خطی}{8}{chapter.2}%
+\contentsline {section}{\numberline {2.1}اکتشاف درون داده‌ها}{8}{section.2.1}%
+\contentsline {subsection}{\numberline {2.1.1}پر کردن مقادیر خالی}{8}{subsection.2.1.1}%
+\contentsline {subsection}{\numberline {2.1.2}رسم نقشه گرمایی همبستگی}{9}{subsection.2.1.2}%
+\contentsline {subsection}{\numberline {2.1.3}اسکیل کردن}{9}{subsection.2.1.3}%
+\contentsline {subsection}{\numberline {2.1.4}آماده‌سازی داده‌ها برای آموزش مدل}{10}{subsection.2.1.4}%
+\contentsline {section}{\numberline {2.2}مدل‌سازی داده‌ها و آموزش}{10}{section.2.2}%
+\contentsline {subsection}{\numberline {2.2.1}تابع رگرسیون خطی}{10}{subsection.2.2.1}%
+\contentsline {paragraph}{تابع هزینه}{10}{section*.2}%
+\contentsline {paragraph}{تکانه}{10}{section*.3}%
+\contentsline {paragraph}{توقف زودهنگام}{10}{section*.4}%
+\contentsline {paragraph}{عادی‌سازی}{10}{section*.5}%
+\contentsline {paragraph}{تغییر سرعت یادگیری}{10}{section*.6}%
+\contentsline {paragraph}{نمونه‌برداری}{10}{section*.7}%
+\contentsline {paragraph}{رسم تغییرات‌}{11}{section*.8}%
+\contentsline {section}{\numberline {2.3}پیش‌بینی}{11}{section.2.3}%
+\contentsline {subsection}{\numberline {2.3.1}پیش‌بینی روی داده‌های تست}{12}{subsection.2.3.1}%
+\contentsline {subsection}{\numberline {2.3.2}بازی کردن با پارامترها}{13}{subsection.2.3.2}%

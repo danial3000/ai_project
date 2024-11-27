@@ -1,0 +1,23 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{n}{heuristic} \PYG{o}{=} \PYG{n}{cornersHeuristic}
+\PYG{n}{priority\PYGZus{}queue} \PYG{o}{=} \PYG{n}{util}\PYG{o}{.}\PYG{n}{PriorityQueue}\PYG{p}{()}
+\PYG{n}{start\PYGZus{}state} \PYG{o}{=} \PYG{n}{problem}\PYG{o}{.}\PYG{n}{getStartState}\PYG{p}{()}
+\PYG{n}{priority\PYGZus{}queue}\PYG{o}{.}\PYG{n}{push}\PYG{p}{((}\PYG{n}{start\PYGZus{}state}\PYG{p}{,} \PYG{p}{[]),} \PYG{l+m+mi}{0}\PYG{p}{)}
+\PYG{n}{visited} \PYG{o}{=} \PYG{n+nb}{set}\PYG{p}{()}
+
+\PYG{k}{while} \PYG{o+ow}{not} \PYG{n}{priority\PYGZus{}queue}\PYG{o}{.}\PYG{n}{isEmpty}\PYG{p}{():}
+    \PYG{n}{state}\PYG{p}{,} \PYG{n}{actions} \PYG{o}{=} \PYG{n}{priority\PYGZus{}queue}\PYG{o}{.}\PYG{n}{pop}\PYG{p}{()}
+
+    \PYG{k}{if} \PYG{n}{problem}\PYG{o}{.}\PYG{n}{isGoalState}\PYG{p}{(}\PYG{n}{state}\PYG{p}{):}
+        \PYG{k}{return} \PYG{n}{actions}
+
+    \PYG{k}{if} \PYG{n}{state} \PYG{o+ow}{not} \PYG{o+ow}{in} \PYG{n}{visited}\PYG{p}{:}
+        \PYG{n}{visited}\PYG{o}{.}\PYG{n}{add}\PYG{p}{(}\PYG{n}{state}\PYG{p}{)}
+
+        \PYG{n}{successors} \PYG{o}{=} \PYG{n}{problem}\PYG{o}{.}\PYG{n}{getSuccessors}\PYG{p}{(}\PYG{n}{state}\PYG{p}{)}
+        \PYG{k}{for} \PYG{n}{successor}\PYG{p}{,} \PYG{n}{action}\PYG{p}{,} \PYG{n}{cost} \PYG{o+ow}{in} \PYG{n}{successors}\PYG{p}{:}
+            \PYG{k}{if} \PYG{n}{successor} \PYG{o+ow}{not} \PYG{o+ow}{in} \PYG{n}{visited}\PYG{p}{:}
+                \PYG{n}{new\PYGZus{}cost} \PYG{o}{=} \PYG{n}{problem}\PYG{o}{.}\PYG{n}{getCostOfActions}\PYG{p}{(}\PYG{n}{actions} \PYG{o}{+} \PYG{p}{[}\PYG{n}{action}\PYG{p}{])}
+                \PYG{n}{priority\PYGZus{}queue}\PYG{o}{.}\PYG{n}{push}\PYG{p}{((}\PYG{n}{successor}\PYG{p}{,} \PYG{n}{actions} \PYG{o}{+} \PYG{p}{[}\PYG{n}{action}\PYG{p}{]),} \PYG{n}{new\PYGZus{}cost} \PYG{o}{+} \PYG{n}{heuristic}\PYG{p}{(}\PYG{n}{successor}\PYG{p}{,} \PYG{n}{problem}\PYG{p}{))}
+
+\end{Verbatim}

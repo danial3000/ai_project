@@ -1,0 +1,17 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+Mean Absolute Error: 0.31429430780462186
+Mean Squared Error: 0.15990997244596597
+R2 Score: 0.839718589887849
+
+Mean Absolute Error: 0.036034161275208226
+Mean Squared Error: 0.0020939675495502044
+R2 Score: 0.8440392259660622
+
+Mean Absolute Error: 0.3122935770427608
+Mean Squared Error: 0.15784894281081954
+R2 Score: 0.8417844068669359
+
+Mean Absolute Error: 0.03595022487165275
+Mean Squared Error: 0.002089504719597371
+R2 Score: 0.8443716219547084
+\end{Verbatim}
