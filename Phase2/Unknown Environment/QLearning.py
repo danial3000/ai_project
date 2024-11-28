@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 class QLearning:
     action_mapping = {
         0: (0, 1),  # Up
@@ -9,60 +10,75 @@ class QLearning:
         3: (1, 0)  # Right
     }
 
-    def __init__(self, env, learning_rate=0.1, discount_factor=0.8, epsilon_greedy=0.99, decay_rate=0.99):
+    def __init__(self, env, learning_rate=0.1, discount_factor=0.8, epsilon_greedy=0.9999, decay_rate=0.99):
         self.env = env
         self.opt = 4
         self.dim = 8
 
-        self.learningRate = learning_rate
-        self.discountFactor = discount_factor
-        self.epsilonGreedy = epsilon_greedy
-        self.decayRate = decay_rate
+        self.learning_rate = learning_rate
+        self.discount_factor = discount_factor
+        self.epsilon_greedy = epsilon_greedy
+        self.decay_rate = decay_rate
 
-        self.qTable = np.zeros((self.dim, self.dim, self.opt))
-        self.qPolicy = np.zeros((self.dim, self.dim), dtype=np.int64)
+        self.q_table = np.zeros((self.dim, self.dim, self.opt))
+        self.q_policy = np.zeros((self.dim, self.dim), dtype=np.int64)
 
 
     def episode(self):
+
         state = self.env.reset()
         total_rewards = 0
         done = False
 
+        state_visit_count = np.zeros((self.dim, self.dim), dtype=np.int64)
+        step_count = 0
+
         while not done:
-            if np.random.rand() <= self.epsilonGreedy:
+            step_count += 1
+
+            if np.random.rand() < self.epsilon_greedy:
                 action = np.random.choice([0, 1, 2, 3])
             else:
-                action = np.argmax(self.qTable[state])
+                action = np.argmax(self.q_table[state[0], state[1]])
 
             next_state, reward, done = self.env.step(action)
             total_rewards += reward
 
-            next_reward = np.max(self.qTable[next_state]) if not done else 0
-            self.qTable[state, action] += self.learningRate * (
-                    reward
-                    + self.discountFactor * next_reward
-                    - self.qTable[state, action]
+            state_visit_count[state[0], state[1]] += 1
+            revisit_penalty = - 0.1 * state_visit_count[state[0], state[1]] * step_count if self.epsilon_greedy <= 0.1 else 0
+
+            next_max_q = np.max(self.q_table[next_state[0], next_state[1]]) if not done else 0
+            # reward += 150 - step_count if done and total_rewards >= 1100 else 0
+            reward -= 500 if reward < -1000 and self.epsilon_greedy <= 0.1 else 0
+            reward += 200 if total_rewards >= 1650 and 0 > reward > -1000 else 0
+            self.q_table[state[0], state[1], action] += self.learning_rate * (
+                reward
+                + self.discount_factor * next_max_q
+                - self.q_table[state[0], state[1], action]
+                + revisit_penalty
             )
 
             state = next_state
-            self.epsilonGreedy = max(0.1, self.epsilonGreedy * self.decayRate)
         return total_rewards
 
+    def explore(self, num_episodes):
 
-    def explore(self, episodes):
-        values_difference = []
+        q_val_diff_series = []
         total_rewards = []
 
-        for episode in range(episodes):
-            prev_q = self.qTable.copy()
+        for _ in range(num_episodes):
+            prev_qt = self.q_table.copy()
 
-            episode_reward = self.episode()
+            reward = self.episode()
+            total_rewards.append(reward)
 
-            total_rewards.append(episode_reward)
-            values_difference.append(np.sum(np.abs(prev_q - episode_reward)))
-            self.epsilonGreedy = max(0.1, self.epsilonGreedy * self.decayRate)
+            value_diff = np.sum(np.abs(self.q_table - prev_qt))
+            q_val_diff_series.append(value_diff)
 
-        return values_difference, total_rewards
+            self.epsilon_greedy = max(0.1, self.epsilon_greedy * self.decay_rate)
+            self.learning_rate = max(0.01, self.learning_rate * self.decay_rate)
+
+        return q_val_diff_series, total_rewards
 
     @staticmethod
     def plot_values_difference(values_diff, episodes):
@@ -91,27 +107,31 @@ class QLearning:
 
 
     def set_policy(self):
-        self.qPolicy = np.argmax(self.qTable, axis=2)
-        return self.qPolicy
+        self.q_policy = np.argmax(self.q_table, axis=2)
+        return self.q_policy
 
     def plot_policy(self, policy):
+        # Set background color
+        background_color = (245 / 255, 245 / 255, 220 / 255)  # Normalize RGB values to [0, 1]
+
         plt.figure(figsize=(8, 8))
         ax = plt.gca()
+        ax.set_facecolor(background_color)
 
         # Set the limits and ticks
-        ax.set_xlim(-0.5, self.dim - 0.5)
-        ax.set_ylim(-0.5, self.dim - 0.5)
+        ax.set_xlim(0, self.dim)
+        ax.set_ylim(0, self.dim)
         ax.set_xticks(range(self.dim))
         ax.set_yticks(range(self.dim))
 
         # Draw grid lines
-        ax.grid(True)
+        ax.grid(True, color='black', linestyle='-', linewidth=0.8)
 
         # Remove axis labels for clarity
         ax.set_xticklabels([])
         ax.set_yticklabels([])
 
-        # Invert y-axis to have (0,0) at the top-left corner
+        # Invert y-axis to have (0,0) in the bottom-left
         plt.gca().invert_yaxis()
 
         # Plot arrows for each cell
@@ -119,12 +139,14 @@ class QLearning:
             for j in range(self.dim):
                 action = policy[i, j]
                 dx, dy = self.action_mapping[action]
-                arrow_length = 0.3
+                arrow_length = 0.3  # Length of arrows
                 dx_norm = dx * arrow_length
                 dy_norm = dy * arrow_length
-                ax.arrow(j, i, dx_norm, -dy_norm, head_width=0.1, head_length=0.1, fc='k', ec='k')
+                ax.arrow(j + 0.5, i + 0.5, dx_norm, -dy_norm,
+                         head_width=0.1, head_length=0.1, fc='k', ec='k')
 
+        # Set title
+        plt.title("Policy Rule after Q-Learning", fontsize=16, color='black')
 
-        plt.title("Policy Rule after Q-Learning")
+        # Show the plot
         plt.show()
-
