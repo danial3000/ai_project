@@ -10,7 +10,7 @@ class QLearning:
         3: (1, 0)  # Right
     }
 
-    def __init__(self, env, learning_rate=0.1, discount_factor=0.8, epsilon_greedy=0.9999, decay_rate=0.99, conv_epsilon=0.001, conv_patience=100000):
+    def __init__(self, env, learning_rate=0.1, discount_factor=0.8, epsilon_greedy=0.9999, decay_rate=0.99):
         self.env = env
         self.opt = 4
         self.dim = 8
@@ -62,12 +62,12 @@ class QLearning:
 
     def explore(self, num_episodes, conv_epsilon, conv_patience):
 
-        q_val_diff_series = []
-        total_rewards = []
+        q_val_diff_series = [0]
+        total_rewards = [-4000]
 
         conv_count = 0
 
-        for _ in range(num_episodes):
+        for r in range(num_episodes):
             prev_qt = self.q_table.copy()
 
             reward = self.episode()
@@ -76,8 +76,10 @@ class QLearning:
             value_diff = np.sum(np.abs(self.q_table - prev_qt))
             q_val_diff_series.append(value_diff)
 
-            self.epsilon_greedy = max(0.01, self.epsilon_greedy * self.decay_rate)
-            self.learning_rate = max(0.001, self.learning_rate * self.decay_rate)
+            if total_rewards[-1] <= total_rewards[-2]:
+                self.epsilon_greedy *= self.decay_rate
+            if q_val_diff_series[-1] <= q_val_diff_series[-2]:
+                self.learning_rate *= self.decay_rate
 
             if value_diff < conv_epsilon:
                 conv_count += 1
