@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches
+from fontTools.misc.bezierTools import epsilon
+from matplotlib.tri import Triangulation
+
 
 class QLearning:
     action_mapping = {
@@ -45,11 +47,12 @@ class QLearning:
             total_rewards += reward
 
             state_visit_count[state[0], state[1]] += 1
-            revisit_penalty = - 0.01 * state_visit_count[state[0], state[1]] * step_count if self.epsilon_greedy <= 0.2 else 0
+            revisit_penalty = - (1 - self.epsilon_greedy) ** 4 * state_visit_count[state[0], state[1]] * step_count
 
             next_max_q = np.max(self.q_table[next_state[0], next_state[1]]) if not done else 0
-            reward *= (2 - self.epsilon_greedy) if reward < -1000 else 1
-            reward += 200 if total_rewards >= 1650 and 0 > reward > -1000 else 0
+            reward *= - (1 - self.epsilon_greedy) ** 4 if reward == -1000 else 1
+            reward *= 2 - self.epsilon_greedy if reward == -2000 else 1
+            # reward = -200 if total_rewards >= 2000 and reward == -400 else reward
             self.q_table[state[0], state[1], action] += self.learning_rate * (
                 reward
                 + self.discount_factor * next_max_q
@@ -78,8 +81,10 @@ class QLearning:
 
             if total_rewards[-1] <= total_rewards[-2]:
                 self.epsilon_greedy *= self.decay_rate
-            if q_val_diff_series[-1] <= q_val_diff_series[-2]:
+
+            if q_val_diff_series[-1] >= q_val_diff_series[-2]:
                 self.learning_rate *= self.decay_rate
+
 
             if value_diff < conv_epsilon:
                 conv_count += 1
@@ -123,34 +128,56 @@ class QLearning:
 
         plt.show()
 
-    def plot_qtable_heatmap(self):
 
+    def triangulation_for_triheatmap(self, M, N):
+            xv, yv = np.meshgrid(np.arange(-0.5, M), np.arange(-0.5, N))  # vertices of the squares
+            xc, yc = np.meshgrid(np.arange(0, M), np.arange(0, N))  # centers of the squares
+            x = np.concatenate([xv.ravel(), xc.ravel()])
+            y = np.concatenate([yv.ravel(), yc.ravel()])
+            cstart = (M + 1) * (N + 1)  # indices of the centers
+
+            # Define triangles for each direction (N, E, S, W)
+            trianglesN = [(i + j * (M + 1), i + 1 + j * (M + 1), cstart + i + j * M) for j in range(N) for i in
+                          range(M)]
+            trianglesE = [(i + 1 + j * (M + 1), i + 1 + (j + 1) * (M + 1), cstart + i + j * M) for j in range(N) for i
+                          in range(M)]
+            trianglesS = [(i + 1 + (j + 1) * (M + 1), i + (j + 1) * (M + 1), cstart + i + j * M) for j in range(N) for i
+                          in range(M)]
+            trianglesW = [(i + (j + 1) * (M + 1), i + j * (M + 1), cstart + i + j * M) for j in range(N) for i in
+                          range(M)]
+
+            return [Triangulation(x, y, triangles) for triangles in [trianglesN, trianglesE, trianglesS, trianglesW]]
+
+    def plot_qtable_heatmap(self):
+        actions_u = self.q_table[:, :, 0]  # Values for up
+        actions_r = self.q_table[:, :, 3]  # Values for right
+        actions_d = self.q_table[:, :, 1]  # Values for down
+        actions_l = self.q_table[:, :, 2]  # Values for West left
+        action_values = [actions_u, actions_r, actions_d, actions_l]
+        triangul = self.triangulation_for_triheatmap(self.dim, self.dim)
+
+        # Set color maps to range from red to green
+        cmaps = ['RdYlGn', 'RdYlGn', 'RdYlGn', 'RdYlGn']
+        norms = [plt.Normalize(0, 1) for _ in range(4)]
+
+        # Create the plot
         fig, ax = plt.subplots(figsize=(10, 10))
 
-        for i in range(8):
-            for j in range(8):
-                for action, (dx, dy) in self.action_mapping.items():
-                    # Calculate the color intensity for the triangle corresponding to each action
-                    value = self.q_table[i, j, action]
-                    color = plt.cm.viridis(value)  # Using the 'viridis' colormap
+        # Plot each direction with its corresponding color map
+        imgs = [ax.tripcolor(t, np.ravel(val), cmap=cmap, norm=norm, ec='white')
+                for t, val, cmap, norm in zip(triangul, action_values, cmaps, norms)]
 
-                    # Define the coordinates of the triangle (relative to the cell)
-                    x_coords = [j + 0.5, j + 0.5 + dx * 0.4, j + 0.5 - dx * 0.4]
-                    y_coords = [i + 0.5, i + 0.5 + dy * 0.4, i + 0.5 - dy * 0.4]
+        # Adjust the axis and grid for better visualization
+        ax.set_xticks(range(self.dim))
+        ax.set_yticks(range(self.dim))
+        ax.invert_yaxis()
+        ax.set_aspect('equal', 'box')  # Equal aspect ratio to ensure square cells
+        plt.tight_layout()
 
-                    # Plot the triangle
-                    ax.fill(x_coords, y_coords, color=color)
+        # Add colorbar for the North direction (since the colormap is shared)
+        fig.colorbar(imgs[0], ax=ax)
 
-        # Set the axes properties
-        ax.set_xlim(0, 8)
-        ax.set_ylim(0, 8)
-        ax.set_aspect('equal')
-
-        # Remove axis labels
-        ax.set_xticks([])
-        ax.set_yticks([])
-
-        plt.title("8x8 Heatmap with Directional Actions")
+        # Show the plot
         plt.show()
 
     def set_policy(self):
