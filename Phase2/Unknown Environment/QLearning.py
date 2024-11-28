@@ -76,7 +76,7 @@ class QLearning:
             value_diff = np.sum(np.abs(self.q_table - prev_qt))
             q_val_diff_series.append(value_diff)
 
-            self.epsilon_greedy = max(0.1, self.epsilon_greedy * self.decay_rate)
+            self.epsilon_greedy = max(0.01, self.epsilon_greedy * self.decay_rate)
             self.learning_rate = max(0.001, self.learning_rate * self.decay_rate)
 
             if value_diff < conv_epsilon:
@@ -86,8 +86,15 @@ class QLearning:
             if conv_count >= conv_patience:
                 break
 
+        self.normalize_qtable()
+
         return q_val_diff_series, total_rewards
 
+
+    def normalize_qtable(self):
+        min_values = np.min(self.q_table, axis=2, keepdims=True)
+        max_values = np.max(self.q_table, axis=2, keepdims=True)
+        self.q_table = (self.q_table - min_values) / (max_values - min_values + 1e-8)
 
     @staticmethod
     def plot_values_difference(values_diff, episodes):
@@ -114,6 +121,51 @@ class QLearning:
 
         plt.show()
 
+
+    def plot_qtable_heatmap(self):
+        # Set up the plot
+        fig, ax = plt.subplots(figsize=(10, 10))
+
+        # Loop through the grid and plot each triangle for each action
+        for i in range(8):
+            for j in range(8):
+                # Define the vertices for the triangles (for each action)
+                x0, y0 = j, i
+                x1, y1 = j + 0.5, i + 0.5  # center of cell
+                x2, y2 = j + 1, i
+
+                # For each action, define the appropriate triangle
+                triangles = [
+                    [(x0, y0), (x1, y1), (x2, y2)],  # Right triangle
+                    [(x0, y0), (x1, y1), (x2 - 0.5, y2)],  # Left triangle
+                    [(x0 + 0.5, y0), (x1, y1), (x2, y2)],  # Up triangle
+                    [(x0 + 0.5, y0), (x1, y1), (x2, y2 - 0.5)],  # Down triangle
+                ]
+
+                # Plot each action triangle with color corresponding to Q-values
+                for action in range(4):
+                    triangle = triangles[action]
+                    color = plt.cm.viridis(self.q_table[i, j, action])  # Use a colormap for heatmap
+
+                    # Create a polygon for each triangle
+                    polygon = plt.Polygon(triangle, color=color, edgecolor='k', lw=1)
+                    ax.add_patch(polygon)
+
+        # Adjust the limits and labels for better visibility
+        ax.set_xlim([0, 8])
+        ax.set_ylim([0, 8])
+        ax.set_xticks(np.arange(0.5, 8, 1))
+        ax.set_yticks(np.arange(0.5, 8, 1))
+        ax.set_xticklabels(np.arange(1, 9))
+        ax.set_yticklabels(np.arange(1, 9))
+        ax.set_aspect('equal')
+
+        # Remove grid lines
+        ax.grid(False)
+
+        # Show the plot
+        plt.title("Q-Learning Heatmap with Triangular Actions")
+        plt.show()
 
     def set_policy(self):
         self.q_policy = np.argmax(self.q_table, axis=2)

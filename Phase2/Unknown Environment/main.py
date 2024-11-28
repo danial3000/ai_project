@@ -9,9 +9,10 @@ if __name__ == "__main__":
     screen, clock = PygameInit.initialization()
     FPS = 10
 
-    ql = QLearning(env=env, decay_rate=.99, learning_rate=0.5, discount_factor=0.2, epsilon_greedy=0.99)
+    ql = QLearning(env=env, decay_rate=.99, learning_rate=0.5, discount_factor=0.1, epsilon_greedy=0.99)
     values_difference, total_rewards = ql.explore(num_episodes=10000, conv_patience=3, conv_epsilon=1)
     ql.plot_values_difference(values_difference, total_rewards)
+    ql.plot_qtable_heatmap()
     policy = ql.set_policy()
     ql.plot_policy(policy=policy)
     state = env.reset()
