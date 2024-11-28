@@ -10,7 +10,7 @@ class QLearning:
         3: (1, 0)  # Right
     }
 
-    def __init__(self, env, learning_rate=0.1, discount_factor=0.8, epsilon_greedy=0.9999, decay_rate=0.99):
+    def __init__(self, env, learning_rate=0.1, discount_factor=0.8, epsilon_greedy=0.9999, decay_rate=0.99, conv_epsilon=0.001, conv_patience=100000):
         self.env = env
         self.opt = 4
         self.dim = 8
@@ -30,7 +30,7 @@ class QLearning:
         total_rewards = 0
         done = False
 
-        state_visit_count = np.zeros((self.dim, self.dim), dtype=np.int64)
+        state_visit_count = np.full((self.dim, self.dim), dtype=np.int64, fill_value=-1)
         step_count = 0
 
         while not done:
@@ -45,11 +45,10 @@ class QLearning:
             total_rewards += reward
 
             state_visit_count[state[0], state[1]] += 1
-            revisit_penalty = - 0.1 * state_visit_count[state[0], state[1]] * step_count if self.epsilon_greedy <= 0.1 else 0
+            revisit_penalty = - 0.01 * state_visit_count[state[0], state[1]] * step_count if self.epsilon_greedy <= 0.2 else 0
 
             next_max_q = np.max(self.q_table[next_state[0], next_state[1]]) if not done else 0
-            # reward += 150 - step_count if done and total_rewards >= 1100 else 0
-            reward -= 500 if reward < -1000 and self.epsilon_greedy <= 0.1 else 0
+            reward *= (2 - self.epsilon_greedy) if reward < -1000 else 1
             reward += 200 if total_rewards >= 1650 and 0 > reward > -1000 else 0
             self.q_table[state[0], state[1], action] += self.learning_rate * (
                 reward
@@ -61,10 +60,12 @@ class QLearning:
             state = next_state
         return total_rewards
 
-    def explore(self, num_episodes):
+    def explore(self, num_episodes, conv_epsilon, conv_patience):
 
         q_val_diff_series = []
         total_rewards = []
+
+        conv_count = 0
 
         for _ in range(num_episodes):
             prev_qt = self.q_table.copy()
@@ -76,9 +77,17 @@ class QLearning:
             q_val_diff_series.append(value_diff)
 
             self.epsilon_greedy = max(0.1, self.epsilon_greedy * self.decay_rate)
-            self.learning_rate = max(0.01, self.learning_rate * self.decay_rate)
+            self.learning_rate = max(0.001, self.learning_rate * self.decay_rate)
+
+            if value_diff < conv_epsilon:
+                conv_count += 1
+            else:
+                conv_count = 0
+            if conv_count >= conv_patience:
+                break
 
         return q_val_diff_series, total_rewards
+
 
     @staticmethod
     def plot_values_difference(values_diff, episodes):
@@ -109,6 +118,7 @@ class QLearning:
     def set_policy(self):
         self.q_policy = np.argmax(self.q_table, axis=2)
         return self.q_policy
+
 
     def plot_policy(self, policy):
         # Set background color
