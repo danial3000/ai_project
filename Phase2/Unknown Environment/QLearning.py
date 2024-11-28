@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-
+import matplotlib.patches as patches
 
 class QLearning:
     action_mapping = {
@@ -122,51 +122,52 @@ class QLearning:
         ax2.legend(loc='upper right')
 
         plt.show()
+    @staticmethod
+    def plot_triangle(ax, x, y, direction):
+        triangle = patches.Polygon
+        if direction == 0:  # Up
+            triangle = patches.Polygon([(x, y), (x - 0.5, y - 1), (x + 0.5, y - 1)], closed=True, color='blue',
+                                       alpha=0.6)
+        elif direction == 1:  # Down
+            triangle = patches.Polygon([(x, y), (x - 0.5, y + 1), (x + 0.5, y + 1)], closed=True, color='red',
+                                       alpha=0.6)
+        elif direction == 2:  # Left
+            triangle = patches.Polygon([(x, y), (x + 1, y - 0.5), (x + 1, y + 0.5)], closed=True, color='green',
+                                       alpha=0.6)
+        elif direction == 3:  # Right
+            triangle = patches.Polygon([(x, y), (x - 1, y - 0.5), (x - 1, y + 0.5)], closed=True, color='yellow',
+                                       alpha=0.6)
 
+        ax.add_patch(triangle)
 
     def plot_qtable_heatmap(self):
-        # Set up the plot
+
         fig, ax = plt.subplots(figsize=(10, 10))
 
-        # Loop through the grid and plot each triangle for each action
         for i in range(8):
             for j in range(8):
-                # Define the vertices for the triangles (for each action)
-                x0, y0 = j, i
-                x1, y1 = j + 0.5, i + 0.5  # center of cell
-                x2, y2 = j + 1, i
+                for action, (dx, dy) in self.action_mapping.items():
+                    # Calculate the color intensity for the triangle corresponding to each action
+                    value = self.q_table[i, j, action]
+                    color = plt.cm.viridis(value)  # Using the 'viridis' colormap
 
-                # For each action, define the appropriate triangle
-                triangles = [
-                    [(x0, y0), (x1, y1), (x2, y2)],  # Right triangle
-                    [(x0, y0), (x1, y1), (x2 - 0.5, y2)],  # Left triangle
-                    [(x0 + 0.5, y0), (x1, y1), (x2, y2)],  # Up triangle
-                    [(x0 + 0.5, y0), (x1, y1), (x2, y2 - 0.5)],  # Down triangle
-                ]
+                    # Define the coordinates of the triangle (relative to the cell)
+                    x_coords = [j + 0.5, j + 0.5 + dx * 0.4, j + 0.5 - dx * 0.4]
+                    y_coords = [i + 0.5, i + 0.5 + dy * 0.4, i + 0.5 - dy * 0.4]
 
-                # Plot each action triangle with color corresponding to Q-values
-                for action in range(4):
-                    triangle = triangles[action]
-                    color = plt.cm.viridis(self.q_table[i, j, action])  # Use a colormap for heatmap
+                    # Plot the triangle
+                    ax.fill(x_coords, y_coords, color=color)
 
-                    # Create a polygon for each triangle
-                    polygon = plt.Polygon(triangle, color=color, edgecolor='k', lw=1)
-                    ax.add_patch(polygon)
-
-        # Adjust the limits and labels for better visibility
-        ax.set_xlim([0, 8])
-        ax.set_ylim([0, 8])
-        ax.set_xticks(np.arange(0.5, 8, 1))
-        ax.set_yticks(np.arange(0.5, 8, 1))
-        ax.set_xticklabels(np.arange(1, 9))
-        ax.set_yticklabels(np.arange(1, 9))
+        # Set the axes properties
+        ax.set_xlim(0, 8)
+        ax.set_ylim(0, 8)
         ax.set_aspect('equal')
 
-        # Remove grid lines
-        ax.grid(False)
+        # Remove axis labels
+        ax.set_xticks([])
+        ax.set_yticks([])
 
-        # Show the plot
-        plt.title("Q-Learning Heatmap with Triangular Actions")
+        plt.title("8x8 Heatmap with Directional Actions")
         plt.show()
 
     def set_policy(self):
