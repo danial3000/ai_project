@@ -122,23 +122,6 @@ class QLearning:
         ax2.legend(loc='upper right')
 
         plt.show()
-    @staticmethod
-    def plot_triangle(ax, x, y, direction):
-        triangle = patches.Polygon
-        if direction == 0:  # Up
-            triangle = patches.Polygon([(x, y), (x - 0.5, y - 1), (x + 0.5, y - 1)], closed=True, color='blue',
-                                       alpha=0.6)
-        elif direction == 1:  # Down
-            triangle = patches.Polygon([(x, y), (x - 0.5, y + 1), (x + 0.5, y + 1)], closed=True, color='red',
-                                       alpha=0.6)
-        elif direction == 2:  # Left
-            triangle = patches.Polygon([(x, y), (x + 1, y - 0.5), (x + 1, y + 0.5)], closed=True, color='green',
-                                       alpha=0.6)
-        elif direction == 3:  # Right
-            triangle = patches.Polygon([(x, y), (x - 1, y - 0.5), (x - 1, y + 0.5)], closed=True, color='yellow',
-                                       alpha=0.6)
-
-        ax.add_patch(triangle)
 
     def plot_qtable_heatmap(self):
 
