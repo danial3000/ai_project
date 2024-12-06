@@ -13,6 +13,8 @@ if __name__ == "__main__":
     values_difference, total_rewards = ql.explore(num_episodes=10000, conv_patience=10, conv_epsilon=10)
     ql.plot_values_difference(values_difference, total_rewards)
     policy = ql.set_policy()
+
+    ql.plot_qtable_heatmap(ql.get_config_index([True for _ in range(8)]))
     ql.plot_policy(policy=policy)
     state = env.reset()
 

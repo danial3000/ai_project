@@ -43,7 +43,7 @@ class QLearning:
     def episode(self):
 
         state = self.env.reset()
-        config_index = self.get_config_index(self.__initial_pig_states)
+        config_index = self.get_config_index(self._initial_pig_states)
 
         total_rewards = 0
         done = False
