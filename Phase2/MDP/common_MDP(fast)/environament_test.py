@@ -306,8 +306,11 @@ class AngryBirds:
             # Update centroids
             new_centroids = []
             for cluster in clusters:
-                new_centroid = tuple([sum(coord) / len(coord) for coord in zip(*cluster)])
-                new_centroids.append(new_centroid)
+                if len(cluster) == 0:
+                    new_centroids.append(random.choice(points))
+                else:
+                    new_centroid = tuple([sum(coord) / len(coord) for coord in zip(*cluster)])
+                    new_centroids.append(new_centroid)
 
             if new_centroids == centroids:
                 break
