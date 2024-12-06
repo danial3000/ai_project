@@ -3,6 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.tri import Triangulation
 
+# for getting mode for policy map
+from scipy import stats
 
 class QLearning:
     __action_mapping = {
@@ -13,7 +15,7 @@ class QLearning:
     }
 
 
-    def __init__(self, env, learning_rate=0.1, discount_factor=0.8, epsilon_greedy=0.9999, decay_rate=0.999, pigs_num=8):
+    def __init__(self, env, learning_rate=0.5, discount_factor=0.8, epsilon_greedy=0.99, decay_rate=0.99, pigs_num=8):
         self.env = env
         self.opt = 4
         self.dim = 8
@@ -174,11 +176,11 @@ class QLearning:
 
             return [Triangulation(x, y, triangles) for triangles in [triangles_u, triangles_r, triangles_d, triangles_l]]
 
-    def plot_qtable_heatmap(self):
-        actions_u = self.q_table[:, :, 0]  # Values for up
-        actions_r = self.q_table[:, :, 3]  # Values for right
-        actions_d = self.q_table[:, :, 1]  # Values for down
-        actions_l = self.q_table[:, :, 2]  # Values for West left
+    def plot_qtable_heatmap(self, pig_states):
+        actions_u = self.q_table[:, :, pig_states, 0]  # Values for up
+        actions_r = self.q_table[:, :, pig_states, 3]  # Values for right
+        actions_d = self.q_table[:, :, pig_states, 1]  # Values for down
+        actions_l = self.q_table[:, :, pig_states, 2]  # Values for left
         action_values = [actions_u, actions_r, actions_d, actions_l]
         triangles = self.triangulation_for_tri_heatmap(self.dim, self.dim)
 
@@ -207,25 +209,17 @@ class QLearning:
         plt.show()
 
     def set_policy(self):
-        # Find the maximum values along axis 3
+        max_indices = np.argmax(self.q_table, axis=3)
+
         max_values = np.max(self.q_table, axis=3)
+        for i in range(self.dim):
+            for j in range(self.dim):
+                for k in range(self.num_configs):
+                    max_indices_at_point = np.where(self.q_table[i, j, k, :] == max_values[i, j, k])[0]
+                    if len(max_indices_at_point) > 1:
+                        max_indices[i, j, k] = np.random.choice(max_indices_at_point)
 
-        # Create a mask of maximum values
-        max_mask = self.q_table == max_values[:, :, :, np.newaxis]
-
-        # Initialize the result array
-        self.q_policy = np.zeros(self.q_table.shape[:3], dtype=int)
-
-        # Randomly select an index for each position with multiple maximums
-        for i in range(self.q_table.shape[0]):
-            for j in range(self.q_table.shape[1]):
-                for k in range(self.q_table.shape[2]):
-                    # Get indices where maximum occurs
-                    max_indices = np.where(max_mask[i, j, k])[0]
-
-                    # Randomly select one of the maximum indices
-                    self.q_policy[i, j, k] = np.random.choice(max_indices)
-
+        self.q_policy = max_indices
         return self.q_policy
 
     def plot_policy(self, policy):
@@ -255,8 +249,7 @@ class QLearning:
         # Plot arrows for each cell
         for i in range(self.dim):
             for j in range(self.dim):
-                print(policy[i, j])
-                action = np.mod(policy[i, j])
+                action = int(stats.mode(policy[i, j, :])[0])
                 dx, dy = self.__action_mapping[action]
                 arrow_length = 0.3  # Length of arrows
                 dx_norm = dx * arrow_length
@@ -265,7 +258,7 @@ class QLearning:
                          head_width=0.1, head_length=0.1, fc='k', ec='k')
 
         # Set title
-        plt.title("Policy Rule after Q-Learning", fontsize=16, color='black')
+        plt.title("Policy Rule after train Q-Learning (Mode of actions)", fontsize=16, color='black')
 
         # Show the plot
         plt.show()
