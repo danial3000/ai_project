@@ -1,0 +1,22 @@
+\contentsline {chapter}{\numberline {1}فرآیند تصمیم مارکوف}{2}{chapter.1}%
+\contentsline {section}{\numberline {1.1}مقدمه}{2}{section.1.1}%
+\contentsline {section}{\numberline {1.2}خوشه‌بندی}{2}{section.1.2}%
+\contentsline {subsection}{\numberline {1.2.1}انتخاب تعداد خوشه‌ها}{2}{subsection.1.2.1}%
+\contentsline {subsection}{\numberline {1.2.2}همگرایی خوشه‌بندی و تشکیل نقشه‌‌ی گرمایی}{3}{subsection.1.2.2}%
+\contentsline {section}{\numberline {1.3}خروجی الگوریتم}{3}{section.1.3}%
+\contentsline {chapter}{\numberline {2}محیط ناشناخته}{5}{chapter.2}%
+\contentsline {section}{\numberline {2.1}مقدمه}{5}{section.2.1}%
+\contentsline {section}{\numberline {2.2}شیوه‌ی پیاده‌سازی الگوریتم QLearning}{5}{section.2.2}%
+\contentsline {subsection}{\numberline {2.2.1}ابرپارامترهای آموزش}{5}{subsection.2.2.1}%
+\contentsline {subsection}{\numberline {2.2.2}همگرایی مقادیر}{5}{subsection.2.2.2}%
+\contentsline {subsection}{\numberline {2.2.3}استخراج سیاست}{6}{subsection.2.2.3}%
+\contentsline {subsection}{\numberline {2.2.4}سایر ویژگی‌ها}{7}{subsection.2.2.4}%
+\contentsline {paragraph}{مهندسی پاداش}{7}{section*.5}%
+\contentsline {paragraph}{مصورسازی}{7}{section*.6}%
+\contentsline {paragraph}{اثرپذیری از حالت خوک‌ها}{7}{section*.8}%
+\contentsline {section}{\numberline {2.3}خروجی}{8}{section.2.3}%
+\contentsline {section}{\numberline {2.4}شبکه‌ی عصبی}{8}{section.2.4}%
+\contentsline {subsection}{\numberline {2.4.1}مقدمه}{8}{subsection.2.4.1}%
+\contentsline {subsection}{\numberline {2.4.2}پیاده‌سازی}{8}{subsection.2.4.2}%
+\contentsline {paragraph}{ساختار شبکه}{8}{section*.9}%
+\contentsline {paragraph}{اپیزودها}{8}{section*.10}%

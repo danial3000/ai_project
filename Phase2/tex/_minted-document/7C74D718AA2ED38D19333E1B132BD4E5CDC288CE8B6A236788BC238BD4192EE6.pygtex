@@ -1,0 +1,13 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+[False, False, False, False, False, False, False, False]
+Episode finished with reward: 2347
+[False, False, False, False, False, False, False, False]
+Episode finished with reward: 2336
+[False, False, False, False, False, False, False, False]
+Episode finished with reward: 2285
+[False, False, False, False, False, False, False, False]
+Episode finished with reward: 2329
+[False, False, False, False, False, False, False, False]
+Episode finished with reward: 2303
+MEAN REWARD: 0.2320
+\end{Verbatim}
