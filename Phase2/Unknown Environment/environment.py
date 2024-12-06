@@ -85,15 +85,18 @@ class UnknownAngryBirds:
         self.__num_queens = QUEENS
         self.__num_rocks = ROCKS
         self.__num_tnts = TNTs
-        self.__probability_dict = self.__generate_probability_dict()
+
+        self.reward = 0
+        self.done = False
+        self.pig_states = []
+        self.__pig_coordinates = []
         self.__base_grid = self.__generate_grid()
+        self.__grid = copy.deepcopy(self.__base_grid)
+        self.__probability_dict = self.__generate_probability_dict()
+
         self.__agent_pos = (0, 0)
         self.__max_actions = MAX_ACTIONS
         self.__actions_taken = 0
-
-        self.__grid = copy.deepcopy(self.__base_grid)
-        self.reward = 0
-        self.done = False
 
         self.__agent_image = pygame.image.load("Env/icons/yellow bird.png")
         self.__agent_image = pygame.transform.scale(self.__agent_image, (self.__tile_size, self.__tile_size))
@@ -142,6 +145,7 @@ class UnknownAngryBirds:
                     if (r, c) not in filled_spaces:
                         grid[r][c] = 'P'
                         filled_spaces.append((r, c))
+                        self.__pig_coordinates.append((r, c))
                         break
 
             for _ in range(self.__num_queens):
@@ -244,7 +248,8 @@ class UnknownAngryBirds:
         next_state = self.__agent_pos
         is_terminated = self.done
         self.reward = reward
-        return next_state, self.reward, is_terminated
+        self.pig_states = self.__get_pig_state()
+        return next_state, self.reward, self.pig_states, is_terminated
 
     def render(self, screen):
         for r in range(self.__grid_size):
@@ -316,3 +321,13 @@ class UnknownAngryBirds:
                         'intended': intended_prob,
                         'neighbor': neighbor_prob}
         return probability_dict
+
+    def __get_pig_state(self):
+        grid = self.__grid
+        states = [False for _ in range(self.__num_pigs)]
+
+        for i, pig_coordinate in enumerate(self.__pig_coordinates):
+            x, y = pig_coordinate[0], pig_coordinate[1]
+            if grid[x][y] == 'P':
+                states[i] = True
+        return states

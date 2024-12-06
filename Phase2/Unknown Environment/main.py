@@ -1,7 +1,7 @@
 import pygame
 from environment import UnknownAngryBirds, PygameInit
 
-from QLearning import QLearning
+from qlearning import QLearning
 
 if __name__ == "__main__":
 
@@ -9,10 +9,9 @@ if __name__ == "__main__":
     screen, clock = PygameInit.initialization()
     FPS = 10
 
-    ql = QLearning(env=env, decay_rate=.99, learning_rate=0.5, discount_factor=0.1, epsilon_greedy=0.99)
-    values_difference, total_rewards = ql.explore(num_episodes=10000, conv_patience=3, conv_epsilon=1)
+    ql = QLearning(env=env, decay_rate=.995, learning_rate=0.9, discount_factor=0.8, epsilon_greedy=0.99)
+    values_difference, total_rewards = ql.explore(num_episodes=10000, conv_patience=10, conv_epsilon=10)
     ql.plot_values_difference(values_difference, total_rewards)
-    ql.plot_qtable_heatmap()
     policy = ql.set_policy()
     ql.plot_policy(policy=policy)
     state = env.reset()
@@ -22,6 +21,8 @@ if __name__ == "__main__":
 
         running = True
         total_reward = 0
+        pig_state = [True for _ in range(8)]
+
         while running:
 
             for event in pygame.event.get():
@@ -30,12 +31,13 @@ if __name__ == "__main__":
 
             env.render(screen)
 
-            action = policy[state]
-            next_state, reward, done = env.step(action)
+            action = policy[state[0], state[1], ql.get_config_index(pig_state)]
+            next_state, reward, pig_state, done = env.step(action)
             state = next_state
             total_reward += reward
 
             if done:
+                print(pig_state)
                 print(f"Episode finished with reward: {total_reward}")
                 state = env.reset()
                 episode_reward.append(total_reward)
