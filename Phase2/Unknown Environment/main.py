@@ -12,9 +12,9 @@ if __name__ == "__main__":
     ql = QLearning(env=env, decay_rate=.995, learning_rate=0.9, discount_factor=0.8, epsilon_greedy=0.99)
     values_difference, total_rewards = ql.explore(num_episodes=10000, conv_patience=10, conv_epsilon=10)
     ql.plot_values_difference(values_difference, total_rewards)
-    #ql.plot_qtable_heatmap()
+    ql.plot_qtable_heatmap(ql.get_config_index([True for _ in range(8)]))
     policy = ql.set_policy()
-    # ql.plot_policy(policy=policy)
+    ql.plot_policy(policy=policy)
     state = env.reset()
 
     episode_reward = []
