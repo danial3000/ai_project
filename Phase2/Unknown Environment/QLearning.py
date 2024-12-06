@@ -1,18 +1,20 @@
 import numpy as np
+from itertools import product
+
 import matplotlib.pyplot as plt
-from fontTools.misc.bezierTools import epsilon
 from matplotlib.tri import Triangulation
 
 
 class QLearning:
-    action_mapping = {
+    __action_mapping = {
         0: (0, 1),  # Up
         1: (0, -1),  # Down
         2: (-1, 0),  # Left
         3: (1, 0)  # Right
     }
 
-    def __init__(self, env, learning_rate=0.1, discount_factor=0.8, epsilon_greedy=0.9999, decay_rate=0.99):
+
+    def __init__(self, env, learning_rate=0.1, discount_factor=0.8, epsilon_greedy=0.9999, decay_rate=0.999, pigs_num=8):
         self.env = env
         self.opt = 4
         self.dim = 8
@@ -22,13 +24,26 @@ class QLearning:
         self.epsilon_greedy = epsilon_greedy
         self.decay_rate = decay_rate
 
-        self.q_table = np.zeros((self.dim, self.dim, self.opt))
-        self.q_policy = np.zeros((self.dim, self.dim), dtype=np.int64)
+        self.num_configs = 2 ** pigs_num
 
+        self.__initial_pig_states = [True for _ in range(pigs_num)]
+
+        self.q_table = np.zeros((self.dim, self.dim, self.num_configs, self.opt))
+        self.q_policy = np.zeros((self.dim, self.dim, self.num_configs), dtype=np.int64)
+
+    @staticmethod
+    def get_config_index(pig_states):
+        index = 0
+        for i, state in enumerate(pig_states):
+            if state:
+                index += 2 ** i
+        return index
 
     def episode(self):
 
         state = self.env.reset()
+        config_index = self.get_config_index(self.__initial_pig_states)
+
         total_rewards = 0
         done = False
 
@@ -41,25 +56,35 @@ class QLearning:
             if np.random.rand() < self.epsilon_greedy:
                 action = np.random.choice([0, 1, 2, 3])
             else:
-                action = np.argmax(self.q_table[state[0], state[1]])
+                action = np.argmax(self.q_table[state[0], state[1], config_index])
 
-            next_state, reward, done = self.env.step(action)
+            next_state, reward, next_pig_state, done = self.env.step(action)
             total_rewards += reward
+            next_config_index = self.get_config_index(next_pig_state)
 
             state_visit_count[state[0], state[1]] += 1
-            revisit_penalty = - (1 - self.epsilon_greedy) ** 4 * state_visit_count[state[0], state[1]] * step_count
 
-            next_max_q = np.max(self.q_table[next_state[0], next_state[1]]) if not done else 0
-            reward *= - (1 - self.epsilon_greedy) ** 4 if reward == -1000 else 1
-            reward *= 2 - self.epsilon_greedy if reward == -2000 else 1
-            # reward = -200 if total_rewards >= 2000 and reward == -400 else reward
-            self.q_table[state[0], state[1], action] += self.learning_rate * (
-                reward
-                + self.discount_factor * next_max_q
-                - self.q_table[state[0], state[1], action]
-                + revisit_penalty
-            )
+            if reward == -2000:
+                self.q_table[state[0], state[1], :, action] = (np.max(self.q_table[state[0], state[1], :, action])
+                                                               + self.learning_rate * (
+                                                                       reward
+                                                                       - np.max(self.q_table[state[0], state[1], :, action])
+                                                               ))
+            else:
 
+                next_max_q = np.max(self.q_table[next_state[0], next_state[1], next_config_index]) if not done else 0
+                # revisit_penalty = - (1 - self.epsilon_greedy) ** 4 * state_visit_count[state[0], state[1]] * step_count
+                reward = -1 if reward == -1000 else reward
+                # reward *= 2 - self.epsilon_greedy if reward == -2000 else 1
+                # reward = -200 if total_rewards >= 2000 and reward == -400 else reward
+                self.q_table[state[0], state[1], config_index, action] += self.learning_rate * (
+                        reward
+                        + self.discount_factor * next_max_q
+                        - self.q_table[state[0], state[1], config_index, action]
+                        # + revisit_penalty
+                )
+
+            config_index = next_config_index
             state = next_state
         return total_rewards
 
@@ -93,15 +118,15 @@ class QLearning:
             if conv_count >= conv_patience:
                 break
 
-        self.normalize_qtable()
+        # self.normalize_qtable()
 
         return q_val_diff_series, total_rewards
 
 
-    def normalize_qtable(self):
-        min_values = np.min(self.q_table, axis=2, keepdims=True)
-        max_values = np.max(self.q_table, axis=2, keepdims=True)
-        self.q_table = (self.q_table - min_values) / (max_values - min_values + 1e-8)
+    # def normalize_qtable(self):
+    #     min_values = np.min(self.q_table, axis=2, keepdims=True)
+    #     max_values = np.max(self.q_table, axis=2, keepdims=True)
+    #     self.q_table = (self.q_table - min_values) / (max_values - min_values + 1e-8)
 
     @staticmethod
     def plot_values_difference(values_diff, episodes):
@@ -129,7 +154,8 @@ class QLearning:
         plt.show()
 
 
-    def triangulation_for_triheatmap(self, M, N):
+    @staticmethod
+    def triangulation_for_triheatmap(M, N):
             xv, yv = np.meshgrid(np.arange(-0.5, M), np.arange(-0.5, N))  # vertices of the squares
             xc, yc = np.meshgrid(np.arange(0, M), np.arange(0, N))  # centers of the squares
             x = np.concatenate([xv.ravel(), xc.ravel()])
@@ -181,7 +207,7 @@ class QLearning:
         plt.show()
 
     def set_policy(self):
-        self.q_policy = np.argmax(self.q_table, axis=2)
+        self.q_policy = np.argmax(self.q_table, axis=3)
         return self.q_policy
 
 
@@ -213,7 +239,7 @@ class QLearning:
         for i in range(self.dim):
             for j in range(self.dim):
                 action = policy[i, j]
-                dx, dy = self.action_mapping[action]
+                dx, dy = self.__action_mapping[action]
                 arrow_length = 0.3  # Length of arrows
                 dx_norm = dx * arrow_length
                 dy_norm = dy * arrow_length
