@@ -1,5 +1,4 @@
 import numpy as np
-from itertools import product
 
 import matplotlib.pyplot as plt
 from matplotlib.tri import Triangulation
@@ -47,11 +46,11 @@ class QLearning:
         total_rewards = 0
         done = False
 
-        state_visit_count = np.full((self.dim, self.dim), dtype=np.int64, fill_value=-1)
-        step_count = 0
+        # state_visit_count = np.full((self.dim, self.dim), dtype=np.int64, fill_value=-1)
+        # step_count = 0
 
         while not done:
-            step_count += 1
+            # step_count += 1
 
             if np.random.rand() < self.epsilon_greedy:
                 action = np.random.choice([0, 1, 2, 3])
@@ -62,7 +61,7 @@ class QLearning:
             total_rewards += reward
             next_config_index = self.get_config_index(next_pig_state)
 
-            state_visit_count[state[0], state[1]] += 1
+            # state_visit_count[state[0], state[1]] += 1
 
             if reward == -2000:
                 self.q_table[state[0], state[1], :, action] = (np.max(self.q_table[state[0], state[1], :, action])
@@ -73,10 +72,11 @@ class QLearning:
             else:
 
                 next_max_q = np.max(self.q_table[next_state[0], next_state[1], next_config_index]) if not done else 0
-                # revisit_penalty = - (1 - self.epsilon_greedy) ** 4 * state_visit_count[state[0], state[1]] * step_count
-                reward = -1 if reward == -1000 else reward
-                # reward *= 2 - self.epsilon_greedy if reward == -2000 else 1
+                # revisit_penalty = - ((1 - self.epsilon_greedy) ** 4) * state_visit_count[state[0], state[1]] * step_count
+                reward = -2 if reward == -1000 else reward
                 # reward = -200 if total_rewards >= 2000 and reward == -400 else reward
+                if self.q_table[state[0], state[1], config_index, action] is None:
+                    self.q_table[state[0], state[1], config_index, action] = 0
                 self.q_table[state[0], state[1], config_index, action] += self.learning_rate * (
                         reward
                         + self.discount_factor * next_max_q
@@ -91,7 +91,7 @@ class QLearning:
     def explore(self, num_episodes, conv_epsilon, conv_patience):
 
         q_val_diff_series = [0]
-        total_rewards = [-4000]
+        total_rewards = [0]
 
         conv_count = 0
 
@@ -104,10 +104,10 @@ class QLearning:
             value_diff = np.sum(np.abs(self.q_table - prev_qt))
             q_val_diff_series.append(value_diff)
 
-            if total_rewards[-1] <= total_rewards[-2]:
+            if total_rewards[-1] >= total_rewards[-2]:
                 self.epsilon_greedy *= self.decay_rate
 
-            if q_val_diff_series[-1] >= q_val_diff_series[-2]:
+            if q_val_diff_series[-1] <= q_val_diff_series[-2]:
                 self.learning_rate *= self.decay_rate
 
 
@@ -118,15 +118,15 @@ class QLearning:
             if conv_count >= conv_patience:
                 break
 
-        # self.normalize_qtable()
+        self.normalize_qtable()
 
         return q_val_diff_series, total_rewards
 
 
-    # def normalize_qtable(self):
-    #     min_values = np.min(self.q_table, axis=2, keepdims=True)
-    #     max_values = np.max(self.q_table, axis=2, keepdims=True)
-    #     self.q_table = (self.q_table - min_values) / (max_values - min_values + 1e-8)
+    def normalize_qtable(self):
+        min_values = np.min(self.q_table, axis=3, keepdims=True)
+        max_values = np.max(self.q_table, axis=3, keepdims=True)
+        self.q_table = (self.q_table - min_values) / (max_values - min_values + 1e-10)
 
     @staticmethod
     def plot_values_difference(values_diff, episodes):
@@ -135,14 +135,14 @@ class QLearning:
         # Plot Q-Table differences on the left y-axis
         ax1.set_xlabel('Episode')
         ax1.set_ylabel('Mean Absolute Difference', color='blue')
-        ax1.plot(range(1, len(values_diff) + 1), values_diff, label='Q-Table Difference', marker='.', linestyle='None',
+        ax1.plot(range(1, len(values_diff) + 1), values_diff, label='Q-Table Difference', marker='+', linestyle='None',
                  color='blue')
         ax1.tick_params(axis='y', labelcolor='blue')
         ax1.grid(True)
 
         ax2 = ax1.twinx()
         ax2.set_ylabel('Reward', color='red')
-        ax2.plot(range(1, len(episodes) + 1), episodes, label='Episode Reward', marker='.', linestyle='None',
+        ax2.plot(range(1, len(episodes) + 1), episodes, label='Episode Reward', marker='+', linestyle='None',
                  color='red')
         ax2.tick_params(axis='y', labelcolor='red')
 
@@ -155,24 +155,24 @@ class QLearning:
 
 
     @staticmethod
-    def triangulation_for_triheatmap(M, N):
-            xv, yv = np.meshgrid(np.arange(-0.5, M), np.arange(-0.5, N))  # vertices of the squares
-            xc, yc = np.meshgrid(np.arange(0, M), np.arange(0, N))  # centers of the squares
+    def triangulation_for_tri_heatmap(m, n):
+            xv, yv = np.meshgrid(np.arange(-0.5, m), np.arange(-0.5, n))  # vertices of the squares
+            xc, yc = np.meshgrid(np.arange(0, m), np.arange(0, n))  # centers of the squares
             x = np.concatenate([xv.ravel(), xc.ravel()])
             y = np.concatenate([yv.ravel(), yc.ravel()])
-            cstart = (M + 1) * (N + 1)  # indices of the centers
+            center_start = (m + 1) * (n + 1)  # indices of the centers
 
             # Define triangles for each direction (N, E, S, W)
-            trianglesN = [(i + j * (M + 1), i + 1 + j * (M + 1), cstart + i + j * M) for j in range(N) for i in
-                          range(M)]
-            trianglesE = [(i + 1 + j * (M + 1), i + 1 + (j + 1) * (M + 1), cstart + i + j * M) for j in range(N) for i
-                          in range(M)]
-            trianglesS = [(i + 1 + (j + 1) * (M + 1), i + (j + 1) * (M + 1), cstart + i + j * M) for j in range(N) for i
-                          in range(M)]
-            trianglesW = [(i + (j + 1) * (M + 1), i + j * (M + 1), cstart + i + j * M) for j in range(N) for i in
-                          range(M)]
+            triangles_u = [(i + j * (m + 1), i + 1 + j * (m + 1), center_start + i + j * m) for j in range(n) for i in
+                          range(m)]
+            triangles_r = [(i + 1 + j * (m + 1), i + 1 + (j + 1) * (m + 1), center_start + i + j * m) for j in range(n) for i
+                          in range(m)]
+            triangles_d = [(i + 1 + (j + 1) * (m + 1), i + (j + 1) * (m + 1), center_start + i + j * m) for j in range(n) for i
+                          in range(m)]
+            triangles_l = [(i + (j + 1) * (m + 1), i + j * (m + 1), center_start + i + j * m) for j in range(n) for i in
+                          range(m)]
 
-            return [Triangulation(x, y, triangles) for triangles in [trianglesN, trianglesE, trianglesS, trianglesW]]
+            return [Triangulation(x, y, triangles) for triangles in [triangles_u, triangles_r, triangles_d, triangles_l]]
 
     def plot_qtable_heatmap(self):
         actions_u = self.q_table[:, :, 0]  # Values for up
@@ -180,7 +180,7 @@ class QLearning:
         actions_d = self.q_table[:, :, 1]  # Values for down
         actions_l = self.q_table[:, :, 2]  # Values for West left
         action_values = [actions_u, actions_r, actions_d, actions_l]
-        triangul = self.triangulation_for_triheatmap(self.dim, self.dim)
+        triangles = self.triangulation_for_tri_heatmap(self.dim, self.dim)
 
         # Set color maps to range from red to green
         cmaps = ['RdYlGn', 'RdYlGn', 'RdYlGn', 'RdYlGn']
@@ -190,8 +190,8 @@ class QLearning:
         fig, ax = plt.subplots(figsize=(10, 10))
 
         # Plot each direction with its corresponding color map
-        imgs = [ax.tripcolor(t, np.ravel(val), cmap=cmap, norm=norm, ec='white')
-                for t, val, cmap, norm in zip(triangul, action_values, cmaps, norms)]
+        img = [ax.tripcolor(t, np.ravel(val), cmap=cmap, norm=norm, ec='white')
+                for t, val, cmap, norm in zip(triangles, action_values, cmaps, norms)]
 
         # Adjust the axis and grid for better visualization
         ax.set_xticks(range(self.dim))
@@ -201,15 +201,32 @@ class QLearning:
         plt.tight_layout()
 
         # Add colorbar for the North direction (since the colormap is shared)
-        fig.colorbar(imgs[0], ax=ax)
+        fig.colorbar(img[0], ax=ax)
 
         # Show the plot
         plt.show()
 
     def set_policy(self):
-        self.q_policy = np.argmax(self.q_table, axis=3)
-        return self.q_policy
+        # Find the maximum values along axis 3
+        max_values = np.max(self.q_table, axis=3)
 
+        # Create a mask of maximum values
+        max_mask = self.q_table == max_values[:, :, :, np.newaxis]
+
+        # Initialize the result array
+        self.q_policy = np.zeros(self.q_table.shape[:3], dtype=int)
+
+        # Randomly select an index for each position with multiple maximums
+        for i in range(self.q_table.shape[0]):
+            for j in range(self.q_table.shape[1]):
+                for k in range(self.q_table.shape[2]):
+                    # Get indices where maximum occurs
+                    max_indices = np.where(max_mask[i, j, k])[0]
+
+                    # Randomly select one of the maximum indices
+                    self.q_policy[i, j, k] = np.random.choice(max_indices)
+
+        return self.q_policy
 
     def plot_policy(self, policy):
         # Set background color
@@ -238,7 +255,8 @@ class QLearning:
         # Plot arrows for each cell
         for i in range(self.dim):
             for j in range(self.dim):
-                action = policy[i, j]
+                print(policy[i, j])
+                action = np.mod(policy[i, j])
                 dx, dy = self.__action_mapping[action]
                 arrow_length = 0.3  # Length of arrows
                 dx_norm = dx * arrow_length
