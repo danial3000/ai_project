@@ -152,7 +152,6 @@ class QLearning:
         fig.suptitle('Q-Table Value Difference and Reward per Episode')
         ax1.legend(loc='upper left')
         ax2.legend(loc='upper right')
-
         plt.show()
 
 
@@ -195,17 +194,12 @@ class QLearning:
         img = [ax.tripcolor(t, np.ravel(val), cmap=cmap, norm=norm, ec='white')
                 for t, val, cmap, norm in zip(triangles, action_values, cmaps, norms)]
 
-        # Adjust the axis and grid for better visualization
         ax.set_xticks(range(self.dim))
         ax.set_yticks(range(self.dim))
         ax.invert_yaxis()
-        ax.set_aspect('equal', 'box')  # Equal aspect ratio to ensure square cells
+        ax.set_aspect('equal', 'box')
         plt.tight_layout()
-
-        # Add colorbar for the North direction (since the colormap is shared)
         fig.colorbar(img[0], ax=ax)
-
-        # Show the plot
         plt.show()
 
     def set_policy(self):
@@ -257,8 +251,5 @@ class QLearning:
                 ax.arrow(j + 0.5, i + 0.5, dx_norm, -dy_norm,
                          head_width=0.1, head_length=0.1, fc='k', ec='k')
 
-        # Set title
         plt.title("Policy Rule after train Q-Learning (Mode of actions)", fontsize=16, color='black')
-
-        # Show the plot
         plt.show()
