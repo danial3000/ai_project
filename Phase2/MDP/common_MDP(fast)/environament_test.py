@@ -402,10 +402,6 @@ class AngryBirds:
             reward_table = self.get_reward_table_for(center)
             action_model = self.actions_model(reward_table)
             list_of_action_models.append(action_model)
-            # print("reward_table")
-            # print(reward_table)
-            # print("action_model")
-            # print(action_model)
         return list_of_action_models
 
     def actions_model(self, reward_map):
@@ -441,10 +437,7 @@ class AngryBirds:
                     new_values[x, y] = max_value
                     delta = max(delta, abs(v - new_values[x, y]))
                     actions_taken[x, y] = best_action
-            if last:
-                print(delta, end=',')
             values = new_values
-            # print(values)
             iteration += 1
             if delta < epsilon or iteration >= max_iterations:
                 break
@@ -584,11 +577,7 @@ if __name__ == "__main__":
     env = AngryBirds()
     screen, clock = PygameInit.initialization()
     state = env.reset()
-    print("--------------------")
-    # env.best_clustering(points)
     env.best_clustering(env.pig_points_for_cluster)
-    print("--------------------")
-    # print(env.action_taken)
     sum_of_all = 0
     for _ in range(5):
         running = True
@@ -596,10 +585,6 @@ if __name__ == "__main__":
         count = 0
         moves = 0
         v_tables = env.get_v_tables(env.order_of_v_tables(state))
-        for u in v_tables:
-            print(u)
-            print('--------------')
-            print('--------------')
         while running:
 
             for event in pygame.event.get():
@@ -611,28 +596,16 @@ if __name__ == "__main__":
             if s > len(v_tables) - 1:
                 s = len(v_tables) - 1
             action_table = v_tables[s]
-            print(s)
             moves += 1
-            # print(action_table)
-            # extract action from policy
-            # action = env.action_taken[state]
             action = action_table[state]
-            # print(env.action_taken)
-            # print(state)
-            # print(action)
-            # print("----------------------")
-            # print("----------------------")
             next_state, probability, reward_episode, done = env.step(action)
             state = next_state
             current += reward_episode
             if done:
                 moves = 0
                 env.best_clustering(env.pig_points_for_cluster)
-                # print(f"Episode finished with reward: {t}")
-                # t = 0
                 print(f"current_score: {current}")
                 sum_of_all += current
-                # print(env.transition_table)
                 state = env.reset()
                 # running = False
                 break

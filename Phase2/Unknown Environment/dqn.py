@@ -21,7 +21,7 @@ class DQNetwork(nn.Module):
         return self.fc3(x)            # خروجی Q-values برای هر اقدام
 
 class DQLearning:
-    def __init__(self, env, learning_rate=1e-3, discount_factor=0.99, epsilon_start=1.0,
+    def __init__(self, env, learning_rate=1e-1, discount_factor=0.99, epsilon_start=1.0,
                  epsilon_end=0.01, epsilon_decay_steps=5000, batch_size=64, memory_size=100000,
                  target_update_freq=1000):
         """
