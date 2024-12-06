@@ -1,8 +1,483 @@
+# import torch
+# import torch.nn as nn
+# import torch.optim as optim
+# import numpy as np
+# from collections import deque
+# import random
+#
+# import pygame
+# from environment import UnknownAngryBirds, PygameInit
+#
+# class DQNetwork(nn.Module):
+#     def __init__(self, input_dim, output_dim):
+#         super(DQNetwork, self).__init__()
+#         self.fc1 = nn.Linear(input_dim, 128)  # First hidden layer with 128 neurons
+#         self.fc2 = nn.Linear(128, 64)         # Second hidden layer with 64 neurons
+#         self.fc3 = nn.Linear(64, output_dim)  # Output layer with neurons equal to number of actions
+#
+#     def forward(self, x):
+#         x = torch.relu(self.fc1(x))  # Apply ReLU activation after first layer
+#         x = torch.relu(self.fc2(x))  # Apply ReLU activation after second layer
+#         return self.fc3(x)            # Output Q-values for each action
+#
+#
+# class DQLearning:
+#     def __init__(self, env, learning_rate=1e-3, discount_factor=0.99, epsilon_start=1.0,
+#                  epsilon_end=0.01, epsilon_decay_steps=5000, pigs_num=8, batch_size=64, memory_size=100000,
+#                  target_update_freq=1000):
+#         """
+#         Initializes the Deep Q-Learning agent.
+#
+#         Parameters:
+#             env (UnknownAngryBirds): The environment.
+#             learning_rate (float): Learning rate for the optimizer.
+#             discount_factor (float): Discount factor for future rewards.
+#             epsilon_start (float): Initial exploration rate.
+#             epsilon_end (float): Minimum exploration rate.
+#             epsilon_decay_steps (int): Number of steps over which epsilon decays.
+#             pigs_num (int): Number of pigs in the environment.
+#             batch_size (int): Size of mini-batches sampled from replay memory.
+#             memory_size (int): Maximum size of the replay memory.
+#             target_update_freq (int): Frequency (in steps) to update the target network.
+#         """
+#         self.env = env
+#         self.learning_rate = learning_rate
+#         self.discount_factor = discount_factor
+#
+#         self.epsilon = epsilon_start
+#         self.epsilon_end = epsilon_end
+#         self.epsilon_decay_steps = epsilon_decay_steps
+#         self.epsilon_decay_step = (epsilon_start - epsilon_end) / epsilon_decay_steps
+#
+#         self.pigs_num = pigs_num
+#         self.num_configs = 2 ** pigs_num
+#
+#         self.input_dim = 2 + pigs_num  # Agent position (2) + pig states
+#         self.output_dim = 4  # Actions: Up, Down, Left, Right
+#
+#         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#
+#         # Initialize the Q-network and target network
+#         self.q_network = DQNetwork(self.input_dim, self.output_dim).to(self.device)
+#         self.target_network = DQNetwork(self.input_dim, self.output_dim).to(self.device)
+#         self.target_network.load_state_dict(self.q_network.state_dict())
+#         self.target_network.eval()  # Set target network to evaluation mode
+#
+#         self.optimizer = optim.Adam(self.q_network.parameters(), lr=self.learning_rate)
+#         self.criterion = nn.MSELoss()
+#
+#         # Experience replay buffer
+#         self.memory = deque(maxlen=memory_size)
+#         self.batch_size = batch_size
+#
+#         # For updating target network
+#         self.target_update_freq = target_update_freq
+#         self.step_count = 0
+#
+#     def get_state_vector(self, state, pig_state):
+#         """
+#         Converts the state into a flat vector suitable for the neural network.
+#
+#         Parameters:
+#             state (tuple): Agent's position (i, j).
+#             pig_state (list): List of boolean values indicating pig states.
+#
+#         Returns:
+#             np.array: Flattened state vector.
+#         """
+#         # Normalize positions by grid size (assuming grid_size=8)
+#         normalized_position = [state[0] / 7.0, state[1] / 7.0]
+#         normalized_pig_state = [int(x) for x in pig_state]  # Convert True/False to 1/0
+#         state_vector = np.array(normalized_position + normalized_pig_state, dtype=np.float32)
+#         return state_vector
+#
+#     def select_action(self, state_vector):
+#         """
+#         Selects an action using an epsilon-greedy strategy.
+#
+#         Parameters:
+#             state_vector (np.array): The current state vector.
+#
+#         Returns:
+#             int: Action index.
+#         """
+#         if random.random() < self.epsilon:
+#             return random.randint(0, self.output_dim - 1)  # Explore: random action
+#         else:
+#             state_tensor = torch.tensor(state_vector, dtype=torch.float32).unsqueeze(0).to(self.device)
+#             with torch.no_grad():
+#                 q_values = self.q_network(state_tensor)
+#             return torch.argmax(q_values).item()  # Exploit: best action
+#
+#     def store_transition(self, state_vector, action, reward, next_state_vector, done):
+#         """
+#         Stores a transition in the replay buffer.
+#
+#         Parameters:
+#             state_vector (np.array): Current state vector.
+#             action (int): Action taken.
+#             reward (float): Reward received.
+#             next_state_vector (np.array): Next state vector.
+#             done (bool): Whether the episode has ended.
+#         """
+#         self.memory.append((state_vector, action, reward, next_state_vector, done))
+#
+#     def sample_memory(self):
+#         """
+#         Samples a random mini-batch from the replay buffer.
+#
+#         Returns:
+#             list: A list of sampled transitions.
+#         """
+#         return random.sample(self.memory, self.batch_size)
+#
+#     def update_epsilon(self):
+#         """
+#         Decays the exploration rate.
+#         """
+#         if self.epsilon > self.epsilon_end:
+#             self.epsilon -= self.epsilon_decay_step
+#         else:
+#             self.epsilon = self.epsilon_end
+#
+#     def update_q_network(self):
+#         """
+#         Samples a mini-batch from memory and performs a gradient descent step.
+#         """
+#         if len(self.memory) < self.batch_size:
+#             return  # Not enough samples to train
+#
+#         mini_batch = self.sample_memory()
+#         states, actions, rewards, next_states, dones = zip(*mini_batch)
+#
+#         # Convert lists of arrays to single NumPy arrays for efficiency
+#         states = np.array(states)
+#         next_states = np.array(next_states)
+#
+#         # Convert to tensors
+#         states = torch.tensor(states, dtype=torch.float32).to(self.device)
+#         actions = torch.tensor(actions, dtype=torch.long).unsqueeze(1).to(self.device)
+#         rewards = torch.tensor(rewards, dtype=torch.float32).unsqueeze(1).to(self.device)
+#         next_states = torch.tensor(next_states, dtype=torch.float32).to(self.device)
+#         dones = torch.tensor(dones, dtype=torch.float32).unsqueeze(1).to(self.device)
+#
+#         # Current Q values
+#         current_q_values = self.q_network(states).gather(1, actions)
+#
+#         # Compute target Q values using the target network
+#         with torch.no_grad():
+#             max_next_q_values = self.target_network(next_states).max(1)[0].unsqueeze(1)
+#             target_q_values = rewards + self.discount_factor * max_next_q_values * (1 - dones)
+#
+#         # Compute loss
+#         loss = self.criterion(current_q_values, target_q_values)
+#
+#         # Optimize the Q-network
+#         self.optimizer.zero_grad()
+#         loss.backward()
+#         self.optimizer.step()
+#
+#         # Update epsilon
+#         self.update_epsilon()
+#
+#         # Update target network periodically
+#         self.step_count += 1
+#         if self.step_count % self.target_update_freq == 0:
+#             self.target_network.load_state_dict(self.q_network.state_dict())
+#
+#     def train_episode(self):
+#         """
+#         Trains the agent for a single episode.
+#
+#         Returns:
+#             float: Total reward obtained in the episode.
+#         """
+#         state = self.env.reset()
+#         pig_state = [True for _ in range(self.pigs_num)]
+#         state_vector = self.get_state_vector(state, pig_state)
+#         total_reward = 0
+#         done = False
+#
+#         while not done:
+#             action = self.select_action(state_vector)
+#             next_state, reward, next_pig_state, done = self.env.step(action)
+#             next_state_vector = self.get_state_vector(next_state, next_pig_state)
+#
+#             self.store_transition(state_vector, action, reward, next_state_vector, done)
+#             self.update_q_network()
+#
+#             state_vector = next_state_vector
+#             total_reward += reward
+#
+#         return total_reward
+#
+#     def explore(self, num_episodes, conv_patience=100, conv_epsilon=1e-3):
+#         """
+#         Trains the agent over multiple episodes.
+#
+#         Parameters:
+#             num_episodes (int): Maximum number of training episodes.
+#             conv_patience (int): Number of consecutive episodes with minimal variance to consider convergence.
+#             conv_epsilon (float): Threshold for convergence based on variance.
+#
+#         Returns:
+#             list: Rewards per episode.
+#             list: Average rewards for convergence monitoring.
+#         """
+#         rewards_per_episode = []
+#         recent_rewards = deque(maxlen=conv_patience)
+#         avg_rewards = []
+#
+#         for episode in range(1, num_episodes + 1):
+#             reward = self.train_episode()
+#             rewards_per_episode.append(reward)
+#             recent_rewards.append(reward)
+#
+#             if episode % 100 == 0:
+#                 avg_reward = np.mean(recent_rewards) if recent_rewards else 0
+#                 avg_rewards.append(avg_reward)
+#                 print(f"Episode {episode}, Average Reward: {avg_reward:.2f}, Epsilon: {self.epsilon:.2f}")
+#
+#                 # Check for convergence
+#                 if len(recent_rewards) == conv_patience and np.std(recent_rewards) < conv_epsilon:
+#                     print(f"Converged after {episode} episodes.")
+#                     break
+#
+#         return rewards_per_episode, avg_rewards
+#
+#     def set_policy(self):
+#         """
+#         Extracts the policy by selecting the action with the highest Q-value for each state.
+#         Due to the large state space, consider sampling or aggregating actions for visualization.
+#
+#         Returns:
+#             dict: A dictionary mapping state configurations to actions.
+#         """
+#         policy = {}
+#         grid_size = self.env._UnknownAngryBirds__grid_size
+#         for i in range(grid_size):
+#             for j in range(grid_size):
+#                 for k in range(self.num_configs):
+#                     # Convert k to pig_state
+#                     pig_state = [(k >> n) & 1 == 1 for n in range(self.pigs_num)]
+#                     state_vector = self.get_state_vector((i, j), pig_state)
+#                     state_tensor = torch.tensor(state_vector, dtype=torch.float32).unsqueeze(0).to(self.device)
+#                     with torch.no_grad():
+#                         q_values = self.q_network(state_tensor)
+#                     action = torch.argmax(q_values).item()
+#                     policy[(i, j, k)] = action
+#         return policy
+#
+#     def plot_values_difference(self, rewards, avg_rewards):
+#         """
+#         Plots the rewards per episode and the average rewards over recent episodes.
+#
+#         Parameters:
+#             rewards (list): List of rewards per episode.
+#             avg_rewards (list): List of average rewards for convergence monitoring.
+#         """
+#         import matplotlib.pyplot as plt
+#
+#         plt.figure(figsize=(12, 6))
+#         plt.plot(rewards, label='Rewards per Episode', alpha=0.6)
+#         plt.plot(range(0, len(rewards), 100), avg_rewards, label='Average Rewards (100 episodes)', color='red')
+#         plt.xlabel('Episode')
+#         plt.ylabel('Reward')
+#         plt.title('Rewards over Episodes')
+#         plt.legend()
+#         plt.show()
+#
+#     def plot_policy(self, policy):
+#         """
+#         Visualizes the policy on the grid.
+#
+#         Parameters:
+#             policy (dict): A dictionary mapping state configurations to actions.
+#         """
+#         import matplotlib.pyplot as plt
+#
+#         grid_size = self.env._UnknownAngryBirds__grid_size
+#         plt.figure(figsize=(8, 8))
+#         ax = plt.gca()
+#         ax.set_xlim(0, grid_size)
+#         ax.set_ylim(0, grid_size)
+#         ax.set_xticks(range(grid_size + 1))
+#         ax.set_yticks(range(grid_size + 1))
+#         ax.grid(True)
+#
+#         # Invert y-axis to match grid coordinates
+#         plt.gca().invert_yaxis()
+#
+#         # Initialize action_map as a list of lists to hold actions for each cell
+#         action_map = [[[] for _ in range(grid_size)] for _ in range(grid_size)]
+#
+#         # Populate action_map with actions from the policy
+#         for (i, j, k), action in policy.items():
+#             if 0 <= i < grid_size and 0 <= j < grid_size:
+#                 action_map[i][j].append(action)
+#
+#         # Determine the most common action for each cell and plot arrows
+#         for i in range(grid_size):
+#             for j in range(grid_size):
+#                 actions = action_map[i][j]
+#                 if actions:
+#                     # Compute the most common action (mode) for the cell
+#                     action = max(set(actions), key=actions.count)
+#                     dx, dy = self.get_action_direction(action)
+#                     ax.arrow(
+#                         j + 0.5, i + 0.5,  # Starting point (center of the cell)
+#                         dx * 0.3, dy * 0.3,  # Direction and length of the arrow
+#                         head_width=0.1, head_length=0.1,
+#                         fc='k', ec='k'
+#                     )
+#
+#         plt.title("Learned Policy Arrows")
+#         plt.show()
+#
+#     @staticmethod
+#     def get_action_direction(action):
+#         """
+#         Maps action index to direction vectors for visualization.
+#
+#         Parameters:
+#             action (int): Action index.
+#
+#         Returns:
+#             tuple: Direction vector (dx, dy).
+#         """
+#         action_mapping = {
+#             0: (0, -1),  # Up
+#             1: (0, 1),   # Down
+#             2: (-1, 0),  # Left
+#             3: (1, 0)    # Right
+#         }
+#         return action_mapping.get(action, (0, 0))
+#
+#     @staticmethod
+#     def get_config_index_static(pig_state, pigs_num):
+#         """
+#         Converts pig states to a unique configuration index.
+#
+#         Parameters:
+#             pig_state (list): List of boolean values indicating pig states.
+#             pigs_num (int): Number of pigs.
+#
+#         Returns:
+#             int: Configuration index.
+#         """
+#         index = 0
+#         for i, state in enumerate(pig_state):
+#             if state:
+#                 index += 2 ** i
+#         return index
+#
+#     def save_model(self, filepath):
+#         """
+#         Saves the Q-network and target network's state dictionaries.
+#
+#         Parameters:
+#             filepath (str): Path to save the model.
+#         """
+#         torch.save({
+#             'q_network_state_dict': self.q_network.state_dict(),
+#             'target_network_state_dict': self.target_network.state_dict(),
+#             'optimizer_state_dict': self.optimizer.state_dict(),
+#         }, filepath)
+#         print(f"Model saved to {filepath}")
+#
+#     def load_model(self, filepath):
+#         """
+#         Loads the Q-network and target network's state dictionaries.
+#
+#         Parameters:
+#             filepath (str): Path to load the model from.
+#         """
+#         checkpoint = torch.load(filepath, map_location=self.device)
+#         self.q_network.load_state_dict(checkpoint['q_network_state_dict'])
+#         self.target_network.load_state_dict(checkpoint['target_network_state_dict'])
+#         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+#         print(f"Model loaded from {filepath}")
+#
+#
+# if __name__ == "__main__":
+#     # Initialize the environment and Pygame
+#     env = UnknownAngryBirds()
+#     screen, clock = PygameInit.initialization()
+#     FPS = 10
+#
+#     # Initialize DQN agent
+#     dq_agent = DQLearning(
+#         env=env,
+#         learning_rate=1e-3,
+#         discount_factor=0.99,
+#         epsilon_start=1.0,
+#         epsilon_end=0.01,
+#         epsilon_decay_steps=5000,
+#         pigs_num=8,
+#         batch_size=64,
+#         memory_size=100000,
+#         target_update_freq=1000
+#     )
+#
+#     # Train the agent
+#     num_training_episodes = 1000
+#     rewards, avg_rewards = dq_agent.explore(num_episodes=num_training_episodes, conv_patience=100, conv_epsilon=1e-3)
+#     dq_agent.plot_values_difference(rewards, avg_rewards)
+#
+#     # Extract and visualize the policy
+#     print("Extracting policy...")
+#     policy = dq_agent.set_policy()
+#     print("Policy extraction complete. Visualizing policy...")
+#     dq_agent.plot_policy(policy=policy)
+#
+#     # Demonstrate the learned policy
+#     print("Demonstrating learned policy...")
+#     num_demo_episodes = 5
+#     episode_rewards = []
+#     for demo_episode in range(1, num_demo_episodes + 1):
+#         state = env.reset()
+#         pig_state = [True for _ in range(8)]
+#         state_vector = dq_agent.get_state_vector(state, pig_state)
+#         total_reward = 0
+#         done = False
+#
+#         while not done:
+#             for event in pygame.event.get():
+#                 if event.type == pygame.QUIT:
+#                     pygame.quit()
+#                     exit()
+#
+#             env.render(screen)
+#
+#             # Select action based on the trained Q-network
+#             action = dq_agent.select_action(state_vector)
+#
+#             # Execute action
+#             next_state, reward, next_pig_state, done = env.step(action)
+#             next_state_vector = dq_agent.get_state_vector(next_state, next_pig_state)
+#             total_reward += reward
+#
+#             # Update state
+#             state, pig_state = next_state, next_pig_state
+#             state_vector = next_state_vector
+#
+#             pygame.display.flip()
+#             clock.tick(FPS)
+#
+#         print(f"Demo Episode {demo_episode} finished with reward: {total_reward}")
+#         episode_rewards.append(total_reward)
+#
+#     # Calculate and display mean reward
+#     mean_reward = np.mean(episode_rewards) if episode_rewards else 0
+#     print(f'MEAN REWARD over {num_demo_episodes} episodes: {mean_reward}')
+#     pygame.quit()
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
-from qlearning import QLearning
+from collections import deque
+import random
 
 import pygame
 from environment import UnknownAngryBirds, PygameInit
@@ -10,132 +485,457 @@ from environment import UnknownAngryBirds, PygameInit
 class DQNetwork(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(DQNetwork, self).__init__()
-        self.fc1 = nn.Linear(input_dim, 128)  # Hidden layer size can be adjusted
-        self.fc2 = nn.Linear(128, 64)
-        self.fc3 = nn.Linear(64, output_dim)  # Output layer has 4 values (actions)
+        self.fc1 = nn.Linear(input_dim, 128)  # لایه پنهان اول با 128 نورون
+        self.fc2 = nn.Linear(128, 64)         # لایه پنهان دوم با 64 نورون
+        self.fc3 = nn.Linear(64, output_dim)  # لایه خروجی با تعداد نورون برابر تعداد اقدامات
 
     def forward(self, x):
-        x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
-        return self.fc3(x)
+        x = torch.relu(self.fc1(x))  # اعمال تابع فعال‌سازی ReLU پس از لایه اول
+        x = torch.relu(self.fc2(x))  # اعمال تابع فعال‌سازی ReLU پس از لایه دوم
+        return self.fc3(x)            # خروجی Q-values برای هر اقدام
 
+class DQLearning:
+    def __init__(self, env, learning_rate=1e-3, discount_factor=0.99, epsilon_start=1.0,
+                 epsilon_end=0.01, epsilon_decay_steps=5000, batch_size=64, memory_size=100000,
+                 target_update_freq=1000):
+        """
+        Initializes the Deep Q-Learning agent.
 
-class DQLearning(QLearning):
-    def __init__(self, env, learning_rate=0.5, discount_factor=0.8, epsilon_greedy=0.99, decay_rate=0.99, pigs_num=8):
-        super().__init__(env, learning_rate, discount_factor, epsilon_greedy, decay_rate, pigs_num)
+        Parameters:
+            env (UnknownAngryBirds): The environment.
+            learning_rate (float): Learning rate for the optimizer.
+            discount_factor (float): Discount factor for future rewards.
+            epsilon_start (float): Initial exploration rate.
+            epsilon_end (float): Minimum exploration rate.
+            epsilon_decay_steps (int): Number of steps over which epsilon decays.
+            batch_size (int): Size of mini-batches sampled from replay memory.
+            memory_size (int): Maximum size of the replay memory.
+            target_update_freq (int): Frequency (in steps) to update the target network.
+        """
+        self.env = env
+        self.learning_rate = learning_rate
+        self.discount_factor = discount_factor
 
-        self.input_dim = 10  # i, j and the 8 True/False values
-        self.output_dim = 4  # Actions
+        self.epsilon = epsilon_start
+        self.epsilon_end = epsilon_end
+        self.epsilon_decay_steps = epsilon_decay_steps
+        self.epsilon_decay_step = (epsilon_start - epsilon_end) / epsilon_decay_steps
+
+        self.input_dim = 64  # 8x8 grid
+        self.output_dim = 4  # Actions: Up, Down, Left, Right
+
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        # Initialize the Q-network
+        # Initialize the Q-network and target network
         self.q_network = DQNetwork(self.input_dim, self.output_dim).to(self.device)
-        self.optimizer = optim.Adam(self.q_network.parameters(), lr=learning_rate)
+        self.target_network = DQNetwork(self.input_dim, self.output_dim).to(self.device)
+        self.target_network.load_state_dict(self.q_network.state_dict())
+        self.target_network.eval()  # Set target network to evaluation mode
+
+        self.optimizer = optim.Adam(self.q_network.parameters(), lr=self.learning_rate)
         self.criterion = nn.MSELoss()
 
-    def predict(self, state, pig_state):
-        # Convert to tensor
-        input_tensor = torch.tensor(np.concatenate([state, pig_state]), dtype=torch.float32).to(self.device)
+        # Experience replay buffer
+        self.memory = deque(maxlen=memory_size)
+        self.batch_size = batch_size
+
+        # For updating target network
+        self.target_update_freq = target_update_freq
+        self.step_count = 0
+
+    def get_state_vector(self, grid, agent_position):
+        """
+        Converts the grid state into a flat vector suitable for the neural network.
+
+        Parameters:
+            grid (list of lists): 2D grid representing the environment.
+            agent_position (tuple): Agent's position (row, col).
+
+        Returns:
+            np.array: Flattened state vector with 64 elements.
+        """
+        state_vector = []
+        for i in range(len(grid)):
+            for j in range(len(grid[0])):
+                if (i, j) == agent_position:
+                    state_vector.append(500)  # مقدار نمایانگر موقعیت ایجنت
+                else:
+                    cell = grid[i][j]
+                    if cell == 'R':         # دیوار
+                        state_vector.append(-50)
+                    elif cell == 'P':       # پگ
+                        state_vector.append(250)
+                    elif cell == 'Q':       # ملکه
+                        state_vector.append(-400)
+                    elif cell == 'G':       # هدف (تخم مرغ)
+                        state_vector.append(2000)
+                    elif cell == 'TNT':     # TNT
+                        state_vector.append(-3500)
+                    else:                   # خانه خالی یا محتوای حذف شده
+                        state_vector.append(0)
+        return np.array(state_vector, dtype=np.float32)
+
+    def select_action(self, state_vector):
+        """
+        Selects an action using an epsilon-greedy strategy.
+
+        Parameters:
+            state_vector (np.array): The current state vector.
+
+        Returns:
+            int: Action index.
+        """
+        if random.random() < self.epsilon:
+            return random.randint(0, self.output_dim - 1)  # Explore: random action
+        else:
+            state_tensor = torch.tensor(state_vector, dtype=torch.float32).unsqueeze(0).to(self.device)
+            with torch.no_grad():
+                q_values = self.q_network(state_tensor)
+            return torch.argmax(q_values).item()  # Exploit: best action
+
+    def store_transition(self, state_vector, action, reward, next_state_vector, done):
+        """
+        Stores a transition in the replay buffer.
+
+        Parameters:
+            state_vector (np.array): Current state vector.
+            action (int): Action taken.
+            reward (float): Reward received.
+            next_state_vector (np.array): Next state vector.
+            done (bool): Whether the episode has ended.
+        """
+        self.memory.append((state_vector, action, reward, next_state_vector, done))
+
+    def sample_memory(self):
+        """
+        Samples a random mini-batch from the replay buffer.
+
+        Returns:
+            list: A list of sampled transitions.
+        """
+        return random.sample(self.memory, self.batch_size)
+
+    def update_epsilon(self):
+        """
+        Decays the exploration rate.
+        """
+        if self.epsilon > self.epsilon_end:
+            self.epsilon -= self.epsilon_decay_step
+        else:
+            self.epsilon = self.epsilon_end
+
+    def update_q_network(self):
+        """
+        Samples a mini-batch from memory and performs a gradient descent step.
+        """
+        if len(self.memory) < self.batch_size:
+            return  # Not enough samples to train
+
+        mini_batch = self.sample_memory()
+        states, actions, rewards, next_states, dones = zip(*mini_batch)
+
+        # Convert lists of arrays to single NumPy arrays for efficiency
+        states = np.array(states)
+        next_states = np.array(next_states)
+
+        # Convert to tensors
+        states = torch.tensor(states, dtype=torch.float32).to(self.device)
+        actions = torch.tensor(actions, dtype=torch.long).unsqueeze(1).to(self.device)
+        rewards = torch.tensor(rewards, dtype=torch.float32).unsqueeze(1).to(self.device)
+        next_states = torch.tensor(next_states, dtype=torch.float32).to(self.device)
+        dones = torch.tensor(dones, dtype=torch.float32).unsqueeze(1).to(self.device)
+
+        # Current Q values
+        current_q_values = self.q_network(states).gather(1, actions)
+
+        # Compute target Q values using the target network
         with torch.no_grad():
-            return self.q_network(input_tensor).cpu().numpy()
-
-    def update_q_table(self, state, pig_state, action, reward, next_state, next_pig_state, done):
-        input_tensor = torch.tensor(np.concatenate([state, pig_state]), dtype=torch.float32).to(self.device)
-        target = reward + (1 - done) * self.discount_factor * torch.max(self.q_network(
-            torch.tensor(np.concatenate([next_state, next_pig_state]), dtype=torch.float32).to(self.device)))
-
-        # Get current Q-value
-        current_q_value = self.q_network(input_tensor)[action]
+            max_next_q_values = self.target_network(next_states).max(1)[0].unsqueeze(1)
+            target_q_values = rewards + self.discount_factor * max_next_q_values * (1 - dones)
 
         # Compute loss
-        loss = self.criterion(current_q_value, target)
+        loss = self.criterion(current_q_values, target_q_values)
 
-        # Backpropagate
+        # Optimize the Q-network
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
 
-    def episode(self):
-        state = self.env.reset()
-        pig_state = self.__initial_pig_states
-        total_rewards = 0
+        # Update epsilon
+        self.update_epsilon()
+
+        # Update target network periodically
+        self.step_count += 1
+        if self.step_count % self.target_update_freq == 0:
+            self.target_network.load_state_dict(self.q_network.state_dict())
+
+    def train_episode(self):
+        """
+        Trains the agent for a single episode.
+
+        Returns:
+            float: Total reward obtained in the episode.
+        """
+        agent_pos = self.env.reset()  # دریافت موقعیت ایجنت
+        grid = self.env._UnknownAngryBirds__grid  # دسترسی به شبکه از طریق name mangling
+        state_vector = self.get_state_vector(grid, agent_pos)
+        total_reward = 0
         done = False
 
         while not done:
-            if np.random.rand() < self.epsilon_greedy:
-                action = np.random.choice([0, 1, 2, 3])
-            else:
-                action = np.argmax(self.predict(state, pig_state))
-
+            action = self.select_action(state_vector)
             next_state, reward, next_pig_state, done = self.env.step(action)
-            total_rewards += reward
-            self.update_q_table(state, pig_state, action, reward, next_state, next_pig_state, done)
+            grid = self.env._UnknownAngryBirds__grid  # بروزرسانی شبکه پس از اقدام
+            next_agent_pos = self.env._UnknownAngryBirds__agent_pos  # دریافت موقعیت جدید ایجنت
+            next_state_vector = self.get_state_vector(grid, next_agent_pos)
 
-            state, pig_state = next_state, next_pig_state
+            self.store_transition(state_vector, action, reward, next_state_vector, done)
+            self.update_q_network()
 
-        return total_rewards
+            state_vector = next_state_vector
+            total_reward += reward
+
+        return total_reward
+
+    def explore(self, num_episodes, conv_patience=100, conv_epsilon=1e-3):
+        """
+        Trains the agent over multiple episodes.
+
+        Parameters:
+            num_episodes (int): Maximum number of training episodes.
+            conv_patience (int): Number of consecutive episodes with minimal variance to consider convergence.
+            conv_epsilon (float): Threshold for convergence based on variance.
+
+        Returns:
+            list: Rewards per episode.
+            list: Average rewards for convergence monitoring.
+        """
+        rewards_per_episode = []
+        recent_rewards = deque(maxlen=conv_patience)
+        avg_rewards = []
+
+        for episode in range(1, num_episodes + 1):
+            reward = self.train_episode()
+            rewards_per_episode.append(reward)
+            recent_rewards.append(reward)
+
+            if episode % 100 == 0:
+                avg_reward = np.mean(recent_rewards) if recent_rewards else 0
+                avg_rewards.append(avg_reward)
+                print(f"Episode {episode}, Average Reward: {avg_reward:.2f}, Epsilon: {self.epsilon:.2f}")
+
+                # Check for convergence
+                if len(recent_rewards) == conv_patience and np.std(recent_rewards) < conv_epsilon:
+                    print(f"Converged after {episode} episodes.")
+                    break
+
+        return rewards_per_episode, avg_rewards
 
     def set_policy(self):
-        # Initialize policy using neural network predictions
-        max_indices = np.argmax(self.q_table, axis=3)
-        for i in range(self.dim):
-            for j in range(self.dim):
-                for k in range(self.num_configs):
-                    # Use neural network to estimate uninitialized values
-                    if np.all(self.q_table[i, j, k, :] == 0):
-                        predicted_q_values = self.predict([i, j], self.__initial_pig_states)
-                        self.q_table[i, j, k, :] = predicted_q_values
-                    max_indices_at_point = np.where(self.q_table[i, j, k, :] == np.max(self.q_table[i, j, k, :]))[0]
-                    if len(max_indices_at_point) > 1:
-                        max_indices[i, j, k] = np.random.choice(max_indices_at_point)
-        self.q_policy = max_indices
-        return self.q_policy
+        """
+        Extracts the policy by selecting the action with the highest Q-value for each state.
+        به دلیل فضای بزرگ حالت، می‌توان از نمونه‌برداری یا تجمیع اقدامات برای نمایش استفاده کرد.
 
+        Returns:
+            dict: A dictionary mapping state configurations to actions.
+        """
+        policy = {}
+        grid_size = self.env._UnknownAngryBirds__grid_size
+        for i in range(grid_size):
+            for j in range(grid_size):
+                # ایجاد یک شبکه با ایجنت در موقعیت (i, j) و سایر سلول‌ها خالی
+                grid = [['T' for _ in range(grid_size)] for _ in range(grid_size)]
+                grid[i][j] = 'Agent'  # اضافه کردن ایجنت
+                state_vector = self.get_state_vector(grid, (i, j))
+                state_tensor = torch.tensor(state_vector, dtype=torch.float32).unsqueeze(0).to(self.device)
+                with torch.no_grad():
+                    q_values = self.q_network(state_tensor)
+                action = torch.argmax(q_values).item()
+                policy[(i, j)] = action
+        return policy
+
+    def plot_values_difference(self, rewards, avg_rewards):
+        """
+        Plots the rewards per episode and the average rewards over recent episodes.
+
+        Parameters:
+            rewards (list): List of rewards per episode.
+            avg_rewards (list): List of average rewards for convergence monitoring.
+        """
+        import matplotlib.pyplot as plt
+
+        plt.figure(figsize=(12, 6))
+        plt.plot(rewards, label='Rewards per Episode', alpha=0.6)
+        plt.plot(range(0, len(rewards), 100), avg_rewards, label='Average Rewards (100 episodes)', color='red')
+        plt.xlabel('Episode')
+        plt.ylabel('Reward')
+        plt.title('Rewards over Episodes')
+        plt.legend()
+        plt.show()
+
+    def plot_policy(self, policy):
+        """
+        Visualizes the policy on the grid.
+
+        Parameters:
+            policy (dict): A dictionary mapping state configurations to actions.
+        """
+        import matplotlib.pyplot as plt
+
+        grid_size = self.env._UnknownAngryBirds__grid_size
+        plt.figure(figsize=(8, 8))
+        ax = plt.gca()
+        ax.set_xlim(0, grid_size)
+        ax.set_ylim(0, grid_size)
+        ax.set_xticks(range(grid_size + 1))
+        ax.set_yticks(range(grid_size + 1))
+        ax.grid(True)
+
+        # Invert y-axis to match grid coordinates
+        plt.gca().invert_yaxis()
+
+        # Initialize action_map as a list of lists to hold actions for each cell
+        action_map = [[[] for _ in range(grid_size)] for _ in range(grid_size)]
+
+        # Populate action_map with actions from the policy
+        for (i, j), action in policy.items():
+            if 0 <= i < grid_size and 0 <= j < grid_size:
+                action_map[i][j].append(action)
+
+        # Determine the most common action for each cell and plot arrows
+        for i in range(grid_size):
+            for j in range(grid_size):
+                actions = action_map[i][j]
+                if actions:
+                    # Compute the most common action (mode) for the cell
+                    action = max(set(actions), key=actions.count)
+                    dx, dy = self.get_action_direction(action)
+                    ax.arrow(
+                        j + 0.5, i + 0.5,  # Starting point (center of the cell)
+                        dx * 0.3, dy * 0.3,  # Direction and length of the arrow
+                        head_width=0.1, head_length=0.1,
+                        fc='k', ec='k'
+                    )
+
+        plt.title("Learned Policy Arrows")
+        plt.show()
+
+    @staticmethod
+    def get_action_direction(action):
+        """
+        Maps action index to direction vectors for visualization.
+
+        Parameters:
+            action (int): Action index.
+
+        Returns:
+            tuple: Direction vector (dx, dy).
+        """
+        action_mapping = {
+            0: (0, -1),  # Up
+            1: (0, 1),   # Down
+            2: (-1, 0),  # Left
+            3: (1, 0)    # Right
+        }
+        return action_mapping.get(action, (0, 0))
+
+    def save_model(self, filepath):
+        """
+        Saves the Q-network and target network's state dictionaries.
+
+        Parameters:
+            filepath (str): Path to save the model.
+        """
+        torch.save({
+            'q_network_state_dict': self.q_network.state_dict(),
+            'target_network_state_dict': self.target_network.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+        }, filepath)
+        print(f"Model saved to {filepath}")
+
+    def load_model(self, filepath):
+        """
+        Loads the Q-network and target network's state dictionaries.
+
+        Parameters:
+            filepath (str): Path to load the model from.
+        """
+        checkpoint = torch.load(filepath, map_location=self.device)
+        self.q_network.load_state_dict(checkpoint['q_network_state_dict'])
+        self.target_network.load_state_dict(checkpoint['target_network_state_dict'])
+        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        print(f"Model loaded from {filepath}")
 
 if __name__ == "__main__":
-
+    # Initialize the environment and Pygame
     env = UnknownAngryBirds()
     screen, clock = PygameInit.initialization()
     FPS = 10
 
-    ql = DQLearning(env=env, decay_rate=.995, learning_rate=0.9, discount_factor=0.8, epsilon_greedy=0.99)
-    values_difference, total_rewards = ql.explore(num_episodes=10000, conv_patience=10, conv_epsilon=10)
-    ql.plot_values_difference(values_difference, total_rewards)
-    policy = ql.set_policy()
-    ql.plot_policy(policy=policy)
-    state = env.reset()
+    # Initialize DQN agent
+    dq_agent = DQLearning(
+        env=env,
+        learning_rate=1e-3,
+        discount_factor=0.99,
+        epsilon_start=1.0,
+        epsilon_end=0.01,
+        epsilon_decay_steps=5000,
+        batch_size=64,
+        memory_size=100000,
+        target_update_freq=1000
+    )
 
-    episode_reward = []
-    for _ in range(5):
+    # Train the agent
+    num_training_episodes = 5000
+    rewards, avg_rewards = dq_agent.explore(num_episodes=num_training_episodes, conv_patience=100, conv_epsilon=1e-3)
+    dq_agent.plot_values_difference(rewards, avg_rewards)
 
-        running = True
+    # Extract and visualize the policy
+    print("Extracting policy...")
+    policy = dq_agent.set_policy()
+    print("Policy extraction complete. Visualizing policy...")
+    dq_agent.plot_policy(policy=policy)
+
+    # Demonstrate the learned policy
+    print("Demonstrating learned policy...")
+    num_demo_episodes = 5
+    episode_rewards = []
+    for demo_episode in range(1, num_demo_episodes + 1):
+        agent_pos = env.reset()
+        grid = env._UnknownAngryBirds__grid
+        state_vector = dq_agent.get_state_vector(grid, agent_pos)
         total_reward = 0
-        pig_state = [True for _ in range(8)]
+        done = False
 
-        while running:
-
+        while not done:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
+                    exit()
 
             env.render(screen)
 
-            action = policy[state[0], state[1], ql.get_config_index(pig_state)]
-            next_state, reward, pig_state, done = env.step(action)
-            state = next_state
+            # Select action based on the trained Q-network
+            action = dq_agent.select_action(state_vector)
+
+            # Execute action
+            next_state, reward, next_pig_state, done = env.step(action)
+            grid = env._UnknownAngryBirds__grid
+            next_agent_pos = env._UnknownAngryBirds__agent_pos
+            next_state_vector = dq_agent.get_state_vector(grid, next_agent_pos)
             total_reward += reward
 
-            if done:
-                print(pig_state)
-                print(f"Episode finished with reward: {total_reward}")
-                state = env.reset()
-                episode_reward.append(total_reward)
-                total_reward = 0
-                running = False
+            # Update state
+            agent_pos = next_agent_pos
+            state_vector = next_state_vector
 
             pygame.display.flip()
             clock.tick(FPS)
 
-    print(f'MEAN REWARD: {sum(episode_reward)/len(episode_reward)}')
+        print(f"Demo Episode {demo_episode} finished with reward: {total_reward}")
+        episode_rewards.append(total_reward)
 
+    # Calculate and display mean reward
+    mean_reward = np.mean(episode_rewards) if episode_rewards else 0
+    print(f'MEAN REWARD over {num_demo_episodes} episodes: {mean_reward}')
     pygame.quit()
