@@ -27,7 +27,7 @@ class QLearning:
 
         self.num_configs = 2 ** pigs_num
 
-        self.__initial_pig_states = [True for _ in range(pigs_num)]
+        self._initial_pig_states = [True for _ in range(pigs_num)]
 
         self.q_table = np.zeros((self.dim, self.dim, self.num_configs, self.opt))
         self.q_policy = np.zeros((self.dim, self.dim, self.num_configs), dtype=np.int64)
