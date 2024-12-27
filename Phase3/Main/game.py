@@ -1,9 +1,11 @@
 import pygame
-import heapq
+from heapq import heappush, heappop
 import copy
 import numpy as np
 import os
 from collections import deque
+from queue import PriorityQueue
+import csv
 
 #######################################################
 #                DONT CHANGE THIS PART                #
@@ -297,11 +299,10 @@ class AngryGame:
     def calculate_score(cls, grid, num_actions):
 
         egg_score = (EGGS - len(cls.get_egg_coordinate(grid))) * EGG_REWARD
-        # print(f'egg_score: {egg_score}')
+
         pig_score = (PIGS - len(cls.get_pig_coordinate(grid))) * PIG_REWARD
-        # print(f'pig_score: {pig_score}')
+
         actions_score = DEFAULT_REWARD * num_actions
-        # print(f'action_score: {actions_score}')
 
         sling_score = SLING_REWARD if cls.is_win(grid) else 0
         lose_score = LOSE_REWARD if cls.is_lose(grid, num_actions) else 0
@@ -341,17 +342,17 @@ class AngryGame:
         return successors
 
     @classmethod
-    def get_queen_position_bfs(cls, grid):
+    def get_egg_distance_from_bfs(cls, grid, egg_loc, current_loc):
         queue = deque()
         visited = set()
-        queen_pos = cls.get_queen_position(grid)
-        queue.append((queen_pos[0], queen_pos[1]))
+        hen_pos = current_loc
+        queue.append((hen_pos[0], hen_pos[1]))
         depth = 0
         while queue:
             for i in range(len(queue)):
                 q = queue.popleft()
                 visited.add(q)
-                if grid[q[0]][q[1]] == 'H':
+                if (q[0], q[1]) == egg_loc:
                     return depth
                 g = cls.generate_pos_successors(grid, q, 'queen-bfs')
                 for q_successor in g:
@@ -361,102 +362,161 @@ class AngryGame:
             depth += 1
 
     @classmethod
-    def get_sling_position_bfs(cls, grid):
-        queue = deque()
+    def get_egg_position_ucs(cls, grid, loc):
+        priority_queue = []
         visited = set()
         hen_pos = cls.get_hen_position(grid)
-        queue.append((hen_pos[0], hen_pos[1]))
-        depth = 0
-        while queue:
-            for i in range(len(queue)):
-                q = queue.popleft()
-                visited.add(q)
-                if grid[q[0]][q[1]] == 'S':
-                    return depth
-                g = cls.generate_pos_successors(grid, q, 'sling-bfs')
-                for q_successor in g:
-                    if q_successor not in visited:
-                        queue.append((q_successor[0], q_successor[1]))
-                        visited.add(q_successor)
-            depth += 1
-        # when queen is between sling and hen
+
+        heappush(priority_queue, (0, (hen_pos[0], hen_pos[1])))
+
+        while priority_queue:
+            current_cost, current_node = heappop(priority_queue)
+
+            if current_node in visited:
+                continue
+
+            visited.add(current_node)
+
+            if current_node == loc:
+                return current_cost
+
+            successors = cls.generate_pos_successors(grid, current_node, 'queen-bfs')
+            for successor in successors:
+                if successor not in visited:
+                    new_cost = current_cost + 1
+                    if grid[successor[0]][successor[1]] == 'P':
+                        new_cost += 200
+
+                    heappush(priority_queue, (new_cost, successor))
+
         return 1000
 
-    # ADDED: Heuristic evaluation for intermediate states
+    @classmethod
+    def get_sling_position_bfs(cls, grid):
+        print(cls.print_grid(grid))
+        priority_queue = []
+        visited = set()
+        hen_pos = cls.get_hen_position(grid)
+
+        heappush(priority_queue, (0, (hen_pos[0], hen_pos[1])))  # (هزینه, موقعیت)
+
+        while priority_queue:
+            # کم‌هزینه‌ترین گره را از صف اولویت‌دار خارج می‌کنیم
+            current_cost, current_node = heappop(priority_queue)
+
+            if current_node in visited:
+                continue
+
+            visited.add(current_node)
+
+            if grid[current_node[0]][current_node[1]] == 'S':
+                return current_cost
+
+            successors = cls.generate_pos_successors(grid, current_node, 'sling-bfs')
+            for successor in successors:
+                if successor not in visited:
+                    new_cost = current_cost + 1
+                    if grid[successor[0]][successor[1]] == 'P':
+                        new_cost += 200
+
+                    heappush(priority_queue, (new_cost, successor))
+
+        return 1000
+
+    @classmethod
+    def correct_grid(cls, temp_grid, hen_pos, queen_pos):
+        if hen_pos[1] == queen_pos[1]:
+            up = queen_pos[1]
+            down = queen_pos[1]
+            for i in range(10):
+                up += 1
+                down -= 1
+                if up > 9 or temp_grid[queen_pos[0]][up] == 'R':
+                    up -= 1
+                if down < 0 or temp_grid[queen_pos[0]][down] == 'R':
+                    down += 1
+                if temp_grid[queen_pos[0]][up] != 'S' and temp_grid[queen_pos[0]][up] != 'P' and \
+                        temp_grid[queen_pos[0]][up] != 'Q':
+                    temp_grid[queen_pos[0]][up] = 'R'
+                if temp_grid[queen_pos[0]][down] != 'S' and temp_grid[queen_pos[0]][down] != 'P' and \
+                        temp_grid[queen_pos[0]][down] != 'Q':
+                    temp_grid[queen_pos[0]][down] = 'R'
+        else:
+            up = queen_pos[0]
+            down = queen_pos[0]
+            for i in range(10):
+                up += 1
+                down -= 1
+                if up > 9 or temp_grid[up][queen_pos[1]] == 'R':
+                    up -= 1
+                if down < 0 or temp_grid[down][queen_pos[1]] == 'R':
+                    down += 1
+                if temp_grid[up][queen_pos[1]] != 'S' and temp_grid[up][queen_pos[1]] != 'P' and \
+                        temp_grid[up][queen_pos[1]] != 'Q':
+                    temp_grid[up][queen_pos[1]] = 'R'
+                if temp_grid[down][queen_pos[1]] != 'S' and temp_grid[down][queen_pos[1]] != 'P' and \
+                        temp_grid[down][queen_pos[1]] != 'Q':
+                    temp_grid[down][queen_pos[1]] = 'R'
+        return temp_grid
+
+    # Added: Heuristic evaluation for intermediate states
     @classmethod
     def heuristic_evaluation(cls, grid, num_actions):
+
         base_score = cls.calculate_score(grid, num_actions)
 
+        # hen_successors = cls.generate_hen_successors(grid)
+        #
+        # queen_successors = cls.generate_queen_successors(grid)
+
         hen_pos = cls.get_hen_position(grid)
+
         if hen_pos is None:
             print(hen_pos)
+
         eggs = cls.get_egg_coordinate(grid)
+
         queen_pos = cls.get_queen_position(grid)
 
         sum_dists = 0
+        max_dist = -1
+        min_dist = 1000000
         for egg in eggs:
-            dist = abs(hen_pos[0] - egg[0]) + abs(hen_pos[1] - egg[1])
+            dist = cls.get_egg_position_ucs(grid, (egg[0], egg[1]))
             sum_dists += dist
+            min_dist = min(min_dist, dist)
+            max_dist = max(max_dist, dist)
 
-        # queen_dis = 0
-        # queen_dis = abs(queen_pos[0] - hen_pos[0]) + abs(queen_pos[1] - hen_pos[1])
-        queen_dis = cls.get_queen_position_bfs(grid)
+        queen_dis = abs(queen_pos[0] - hen_pos[0]) + abs(queen_pos[1] - hen_pos[1])
+
         sling_position = cls.get_slingshot_position(grid)
         sling_eated = False
         if sling_position is not None:
             sling_eated = False
         else:
             sling_eated = True
-        if (base_score == 1166 and grid[9][6] == 'H' and grid[7][1] == 'Q') or (base_score == 1366 and grid[9][4] == 'H'
-                                                                                and grid[7][1] == 'Q'):
-            print(cls.print_grid(grid))
-        if base_score > 1250:
-            sling_dist = 0
+        sling_dist = cls.get_sling_position_bfs(grid)
+        if base_score > 1200 or (sling_dist != 1000 and num_actions + sling_dist >= 140):
             if not sling_eated:
-                temp_grid = grid
                 if abs(hen_pos[0] - queen_pos[0]) + abs(hen_pos[1] - queen_pos[1]) == 1:
-                    if abs(hen_pos[0] - queen_pos[0]) == 1:
-                        up = queen_pos[1]
-                        down = queen_pos[1]
-                        for i in range(10):
-                            up += 1
-                            down -= 1
-                            if up > 9 or temp_grid[queen_pos[0]][up] == 'R':
-                                up -= 1
-                            if down < 0 or temp_grid[queen_pos[0]][down] == 'R':
-                                down += 1
-                            if temp_grid[queen_pos[0]][up] != 'S':
-                                temp_grid[queen_pos[0]][up] = 'R'
-                            if temp_grid[queen_pos[0]][down] != 'S':
-                                temp_grid[queen_pos[0]][down] = 'R'
-                    else:
-                        up = queen_pos[0]
-                        down = queen_pos[0]
-                        for i in range(10):
-                            up += 1
-                            down -= 1
-                            if up > 9 or temp_grid[up][queen_pos[1]] == 'R':
-                                up -= 1
-                            if down < 0 or temp_grid[down][queen_pos[1]] == 'R':
-                                down += 1
-                            if temp_grid[up][queen_pos[1]] != 'S':
-                                temp_grid[up][queen_pos[1]] = 'R'
-                            if temp_grid[down][queen_pos[1]] != 'S':
-                                temp_grid[down][queen_pos[1]] = 'R'
+
+                    temp_grid = cls.correct_grid(grid, hen_pos, queen_pos)
+
                     sling_dist = cls.get_sling_position_bfs(temp_grid)
-                else:
-                    sling_dist = cls.get_sling_position_bfs(grid)
                 heuristic_score = base_score - sling_dist  # + (3 * pow(queen_dis, 2))
                 return heuristic_score
             else:
-                heuristic_score = base_score - (len(eggs) * sum_dists) + (3 * pow(queen_dis - 6, 2)) - 400
+                if base_score >= 1500 or (sling_dist != 1000 and num_actions + sling_dist >= 140):
+                    heuristic_score = base_score - (len(eggs) * sum_dists) + (3 * pow(queen_dis, 2))
+                else:
+                    heuristic_score = base_score - (len(eggs) * sum_dists) + (3 * pow(queen_dis, 2)) - 400
                 return heuristic_score
         else:
             if not sling_eated:
-                heuristic_score = base_score - (len(eggs) * sum_dists) + (3 * pow(queen_dis - 6, 2))
+                heuristic_score = base_score - (len(eggs) * sum_dists) + (3 * pow(queen_dis, 2))
                 return heuristic_score
             else:
-                heuristic_score = base_score - (len(eggs) * sum_dists) + (3 * pow(queen_dis - 6, 2)) - 400
+                heuristic_score = base_score - (len(eggs) * sum_dists) + (3 * pow(queen_dis, 2)) - 600
                 return heuristic_score
 
     def render(self, screen):
@@ -564,12 +624,12 @@ class AngryGame:
             return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
         open_set = []
-        heapq.heappush(open_set, (0, start))
+        heappush(open_set, (0, start))
         g_score = {start: 0}
         f_score = {start: heuristic(start, goal)}
 
         while open_set:
-            _, current = heapq.heappop(open_set)
+            _, current = heappop(open_set)
 
             if current == goal:
                 return g_score[current]
@@ -583,7 +643,7 @@ class AngryGame:
                 if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
                     g_score[neighbor] = tentative_g_score
                     f_score[neighbor] = tentative_g_score + heuristic(neighbor, goal)
-                    heapq.heappush(open_set, (f_score[neighbor], neighbor))
+                    heappush(open_set, (f_score[neighbor], neighbor))
 
         return float('inf')
 
@@ -605,7 +665,7 @@ class AngryGame:
 
         if depth == 0 or self.is_win(grid) or self.is_lose(grid, num_actions):
             if self.is_lose(grid, num_actions):
-                base_score = self.calculate_score(grid, num_actions) - 1000
+                base_score = self.calculate_score(grid, num_actions) - 10000
                 return base_score, None
             else:
                 score = self.heuristic_evaluation(grid, num_actions)  # CHANGED to heuristic evaluation
@@ -689,10 +749,10 @@ class AngryGame:
 
 if __name__ == "__main__":
 
-    env = AngryGame(template='test10')
+    env = AngryGame(template='test9')
 
     screen, clock = PygameInit.initialization()
-    FPS = 2000
+    FPS = 5000
 
     env.reset()
     counter = 0
@@ -709,7 +769,7 @@ if __name__ == "__main__":
 
         if counter % 2 == 0:
             move_number = counter // 2
-            action = env.choose_best_hen_action_with_tree(depth=10, move_number=move_number)
+            action = env.choose_best_hen_action_with_tree(depth=7, move_number=move_number)
             if action is not None:
                 env.hen_step(action)
             else:
