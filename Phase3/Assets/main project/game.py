@@ -377,7 +377,8 @@ class AngryGame:
                 and 0 <= new_col < len(grid[0])
                 and grid[new_row][new_col] != 'R'
                 and grid[new_row][new_col] != 'S'
-                and grid[new_row][new_col] != 'P')
+                and grid[new_row][new_col] != 'P'
+                and grid[new_row][new_col] != 'E')
 
     @classmethod
     def __is_valid_for_hen_position(cls, grid, new_row, new_col):
