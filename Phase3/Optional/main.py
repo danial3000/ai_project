@@ -5,7 +5,9 @@ from game import AngryGame, PygameInit
 
 
 class MiniMax:
+
     _actions_limit = 200
+    _max_distance = 18
 
     def __init__(self, environment):
         self.env = environment
@@ -15,25 +17,44 @@ class MiniMax:
         self._is_lose = environment.is_lose
         self._calculate_score = environment.calculate_score
 
+        self._get_pig_coordinate = environment.get_pig_coordinate(environment.grid)
+        self._get_egg_coordinate = environment.get_egg_coordinate(environment.grid)
+
+        self._get_hen_position = self.env.get_hen_position(environment.grid)
+        self._get_bird_position = self.env.get_bird_position(environment.grid)
+        self._get_queen_position = self.env.get_queen_position(environment.grid)
+
+
     @staticmethod
     def distance(pos1, pos2):
         return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
 
 
+    def _bird_heuristic_function(self, grid, num_actions):
+        hen_position = self._get_hen_position(grid)  # the escape agent
+        bird_position = self._get_bird_position(grid)  # the chase agent
+        queen_position = self._get_queen_position(grid)  # the hostile agent
+
+        chasing_score = self._max_distance - self.distance(bird_position, queen_position)
+        escaping_score = self.distance(hen_position, queen_position)
+
+        utility = chasing_score + escaping_score
+
+        return utility
+
 
     def _heuristic_function(self, grid, num_actions):
-        max_distance = 18
-        egg_positions = self.env.get_egg_coordinate(grid)  # list of (x, y) positions
+        egg_positions = self._get_egg_coordinate(grid)  # list of (x, y) positions
         #if len(egg_positions) == 0:
 
 
-        pig_positions = self.env.get_pig_coordinate(grid)  # list of (x, y) positions
-        hen_position = self.env.get_hen_position(grid)  # the escape agent
-        bird_position = self.env.get_bird_position(grid)  # the chase agent
-        queen_position = self.env.get_queen_position(grid)  # the hostile agent
+        pig_positions = self._get_pig_coordinate(grid)  # list of (x, y) positions
+        hen_position = self._get_hen_position(grid)  # the escape agent
+        bird_position = self._get_bird_position(grid)  # the chase agent
+        queen_position = self._get_queen_position(grid)  # the hostile agent
         endpoint = self.endpoint
 
-        egg_score = self._goal - len(self.env.get_egg_coordinate(self.env.grid))
+        egg_score = self._goal - len(self._get_egg_coordinate(self.env.grid))
         print('egg score:', egg_score)
         finishing_factor = 1 if len(egg_positions) == 0 else 0
         print('finishing factore:', finishing_factor)
@@ -50,15 +71,15 @@ class MiniMax:
         hen_safety = self.distance(hen_position, queen_position)
         print('hen safety:', hen_safety)
         # calculate the bird's chase value (inverse distance to hostile agent)
-        bird_chase = max_distance - self.distance(bird_position, queen_position)
+        bird_chase = self._max_distance - self.distance(bird_position, queen_position)
         print('bird chase:', bird_chase)
         # calculate proximity to endpoint for the hen
-        hen_to_endpoint = finishing_factor * (max_distance - self.distance(hen_position, endpoint))
+        hen_to_endpoint = finishing_factor * (self._max_distance - self.distance(hen_position, endpoint))
         print('hen_to_endpoint:', hen_to_endpoint)
         # calculate proximity to eggs for the eggs
-        hen_to_eggs = sum(max_distance - self.distance(hen_position, egg_position) for egg_position in egg_positions)
+        hen_to_eggs = sum(self._max_distance - self.distance(hen_position, egg_position) for egg_position in egg_positions)
         # calculate proximity to pigs for the eggs
-        hen_to_pigs = min(max_distance - self.distance(hen_position, pig_position) for pig_position in pig_positions)
+        hen_to_pigs = min(self._max_distance - self.distance(hen_position, pig_position) for pig_position in pig_positions)
         print('hen_to_pigs:', hen_to_pigs, 'hen_to_eggs:', hen_to_eggs)
         # early finishing penalty
         early_finish = self._goal - egg_score if self._is_win(grid) else 0
