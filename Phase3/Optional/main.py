@@ -5,11 +5,13 @@ from game import AngryGame, PygameInit
 
 
 class MiniMax:
+    _max_util = 0
 
     _actions_limit = 200
     _max_distance = 18
 
     def __init__(self, environment):
+
         self.env = environment
         self._goal = len(environment.get_egg_coordinate(environment.grid))
         self.endpoint = environment.get_slingshot_position(environment.grid)
@@ -45,7 +47,8 @@ class MiniMax:
 
     def _heuristic_function(self, grid, num_actions):
         egg_positions = self._get_egg_coordinate(grid)  # list of (x, y) positions
-        #if len(egg_positions) == 0:
+        # print('finishing factore:', finishing_factor)
+        finishing_factor = len(egg_positions) == 0
 
 
         pig_positions = self._get_pig_coordinate(grid)  # list of (x, y) positions
@@ -55,38 +58,34 @@ class MiniMax:
         endpoint = self.endpoint
 
         egg_score = self._goal - len(self._get_egg_coordinate(self.env.grid))
-        print('egg score:', egg_score)
-        finishing_factor = 1 if len(egg_positions) == 0 else 0
-        print('finishing factore:', finishing_factor)
-        # the bird score if reached appropriate total score
-        egg_score += 250 * finishing_factor if self.env.get_slingshot_position(grid) is None else 0
+        # print('egg score:', egg_score)
 
         # total score
-        total_score = self.env.calculate_score(grid, num_actions)
+        # total_score = self.env.calculate_score(grid, num_actions)
 
         # the bird score if reached appropriate total score
-        bird_score = 600 if self.env.is_queen_exists(grid) and total_score > 200 * (self._goal - 2) else 0
-        print('bird score:', bird_score)
+        # bird_score = 600 if self.env.is_queen_exists(grid) and total_score > 200 * (self._goal - 2) else 0
+        # print('bird score:', bird_score)
         # calculate the hen's safety (distance from hostile agent)
         hen_safety = self.distance(hen_position, queen_position)
-        print('hen safety:', hen_safety)
+        # print('hen safety:', hen_safety)
         # calculate the bird's chase value (inverse distance to hostile agent)
         bird_chase = self._max_distance - self.distance(bird_position, queen_position)
-        print('bird chase:', bird_chase)
+        # print('bird chase:', bird_chase)
         # calculate proximity to endpoint for the hen
         hen_to_endpoint = finishing_factor * (self._max_distance - self.distance(hen_position, endpoint))
-        print('hen_to_endpoint:', hen_to_endpoint)
+        # print('hen_to_endpoint:', hen_to_endpoint)
         # calculate proximity to eggs for the eggs
         hen_to_eggs = sum(self._max_distance - self.distance(hen_position, egg_position) for egg_position in egg_positions)
         # calculate proximity to pigs for the eggs
         hen_to_pigs = min(self._max_distance - self.distance(hen_position, pig_position) for pig_position in pig_positions)
-        print('hen_to_pigs:', hen_to_pigs, 'hen_to_eggs:', hen_to_eggs)
+        # print('hen_to_pigs:', hen_to_pigs, 'hen_to_eggs:', hen_to_eggs)
         # early finishing penalty
         early_finish = self._goal - egg_score if self._is_win(grid) else 0
-        print('early_finish:', early_finish)
+        # print('early_finish:', early_finish)
         # losing penalty
         lose_penalty = 1000 if not self.env.is_hen_exists(grid) or num_actions == self._actions_limit else 0
-        print('lose penalty', lose_penalty)
+        #print('lose penalty', lose_penalty)
         # calculate final utility
         utility = (
                 3 * hen_safety +  # safety distance for the hen
@@ -121,7 +120,10 @@ class MiniMax:
 
         # depth limit reached: combine actual score with heuristic
         if depth == 0:
-            return self._calculate_score(grid, num_actions) + self._heuristic_function(grid, num_actions)
+            self.max_util = max(self._calculate_score(grid, num_actions) + self._heuristic_function(grid, num_actions), self.max_util)
+            print(self.max_util)
+            return self.max_util
+
 
         if agent == 'hen':  # hen maximizing agent
             max_score = float('-inf')
@@ -185,7 +187,7 @@ if __name__ == "__main__":
     screen, clock = PygameInit.initialization()
     FPS = 6
 
-    DEPTH = 3
+    DEPTH = 2
 
     env.reset()
     minimax = MiniMax(environment=env)
