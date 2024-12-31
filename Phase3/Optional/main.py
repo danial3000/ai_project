@@ -65,6 +65,7 @@ class MiniMax:
         # print('hen safety:', hen_safety)
         # calculate the bird's chase value (inverse distance to hostile agent)
         bird_chase = self._max_distance - self.distance(bird_position, queen_position)
+        odd_distance = (bird_chase % 2)
         # print('bird chase:', bird_chase)
         # calculate proximity to endpoint for the hen
         hen_to_endpoint = finishing_factor * 10 * (self._max_distance - self.distance(hen_position, endpoint))
@@ -83,7 +84,8 @@ class MiniMax:
         # calculate final utility
         utility = (
                 3 * hen_safety +  # safety distance for the hen
-                2 * bird_chase +  # chase efficiency for the bird
+                3 * bird_chase +  # chase efficiency for the bird
+                10 * odd_distance + # if the distance between the bird and the queen was odd
                 1 * hen_to_endpoint +  # proximity to endpoint
                 3 * hen_to_eggs -  # proximity to eggs
                 0.1 * hen_to_pigs -  # proximity to eggs
@@ -133,29 +135,31 @@ class MiniMax:
             max_score = float('-inf')
             pos = self._get_hen_position(grid)
             hen_successors = [(successor, ACTION, 1) for successor, ACTION in self._generate_hen_successors(grid)]
-            # if pos[0] == 0:
-            #     hen_successors.append((grid, 2, 0))
-            # elif grid[pos[0] - 1][pos[1]] == 'R':
-            #     hen_successors.append((grid, 2, 0))
-            # if pos[0] == 9:
-            #     hen_successors.append((grid, 3, 0))
-            # elif grid[pos[0] + 1][pos[1]] == 'R':
-            #     hen_successors.append((grid, 3, 0))
-            # if pos[1] == 0:
-            #     hen_successors.append((grid, 0, 0))
-            # elif grid[pos[0]][pos[1] - 1] == 'R':
-            #     hen_successors.append((grid, 0, 0))
-            # if pos[1] == 9:
-            #     hen_successors.append((grid, 1, 0))
-            # elif grid[pos[0]][pos[1] + 1] == 'R':
-            #     hen_successors.append((grid, 1, 0))
+            if pos[0] == 0:
+                hen_successors.append((grid, 2, 0))
+            elif grid[pos[0] - 1][pos[1]] == 'R':
+                hen_successors.append((grid, 2, 0))
+            if pos[0] == 9:
+                hen_successors.append((grid, 3, 0))
+            elif grid[pos[0] + 1][pos[1]] == 'R':
+                hen_successors.append((grid, 3, 0))
+            if pos[1] == 0:
+                hen_successors.append((grid, 0, 0))
+            elif grid[pos[0]][pos[1] - 1] == 'R':
+                hen_successors.append((grid, 0, 0))
+            if pos[1] == 9:
+                hen_successors.append((grid, 1, 0))
+            elif grid[pos[0]][pos[1] + 1] == 'R':
+                hen_successors.append((grid, 1, 0))
             hen_successors = sorted(hen_successors, key=lambda s:  self._heuristic_function(s[0], num_actions + s[2]), reverse=True)
             for successor, ACTION, ACTION_COST in hen_successors:
-                score, _, bird_action = self._alpha_beta_search(successor, num_actions + ACTION_COST, depth - 1, alpha, beta, 'bird')
+                score, _, BIRD_ACTION_LIST = self._alpha_beta_search(successor, num_actions + ACTION_COST, depth - 1, alpha, beta, 'bird')
                 if score > max_score:
+                    bird_action = BIRD_ACTION_LIST
                     max_score = score
                     hen_action = [ACTION]
                 elif score == max_score:
+                    bird_action += BIRD_ACTION_LIST
                     hen_action.append(ACTION)
                 if score > alpha:
                     alpha = score
@@ -165,24 +169,26 @@ class MiniMax:
 
         elif agent == 'bird':  # bird maximizing agent
             max_score = float('-inf')
-            bird_successors = bird_successors = [(successor, ACTION, 1) for successor, ACTION in self._generate_bird_successors(grid)]
+            bird_successors = [(successor, ACTION, 1) for successor, ACTION in self._generate_bird_successors(grid)]
             if self.distance(self._get_bird_position(grid), self._get_queen_position(grid)) % 2 == 0:
+                bird_successors = []
                 pos = self._get_bird_position(grid)
+                blocking_list = ['R', 'P', 'E', 'S']
                 if pos[0] == 0:
                     bird_successors.append((grid, 2, 0))
-                elif grid[pos[0] - 1][pos[1]] in ['R', 'P', 'E']:
+                elif grid[pos[0] - 1][pos[1]] in blocking_list:
                     bird_successors.append((grid, 2, 0))
                 if pos[0] == 9:
                     bird_successors.append((grid, 3, 0))
-                elif grid[pos[0] + 1][pos[1]] in ['R', 'P', 'E']:
+                elif grid[pos[0] + 1][pos[1]] in blocking_list:
                     bird_successors.append((grid, 3, 0))
                 if pos[1] == 0:
                     bird_successors.append((grid, 0, 0))
-                elif grid[pos[0]][pos[1] - 1] in ['R', 'P', 'E']:
+                elif grid[pos[0]][pos[1] - 1] in blocking_list:
                     bird_successors.append((grid, 0, 0))
                 if pos[1] == 9:
                     bird_successors.append((grid, 1, 0))
-                elif grid[pos[0]][pos[1] + 1] in ['R', 'P', 'E']:
+                elif grid[pos[0]][pos[1] + 1] in blocking_list:
                     bird_successors.append((grid, 1, 0))
             bird_successors = sorted(bird_successors, key=lambda s: self._heuristic_function(grid, num_actions + s[2]) + s[2], reverse=True)
             for successor, ACTION, ACTION_COST in bird_successors:
@@ -223,7 +229,7 @@ class MiniMax:
         try:
             self._best_hen_action, self._best_bird_action = random.choice(hen_action_list), random.choice(bird_action_list)
         except Exception:
-            self._best_hen_action, self._best_bird_action = random.choice([1,2,3,4]), random.choice([1,2,3,4])
+            self._best_hen_action, self._best_bird_action = random.choice([0,1,2,3]), random.choice([0,1,2,3])
         return self._best_hen_action, self._best_bird_action
 
 
