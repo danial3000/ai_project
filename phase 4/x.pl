@@ -84,19 +84,23 @@ load_positions(Stream, Row) :-
     ;   true
     ).
 
+% پردازش هر خط
 process_line("", _, _).
 process_line(Line, Row, Col) :-
-    sub_atom(Line, 0, 1, Rest, Char),
-    (   Char = 'B'
-    ->  set_bird_position(Row, Col)
-    ;   Char = 'P'
-    ->  add_pig_position(Row, Col)
-    ;   Char = 'R'
-    ->  add_rock_position(Row, Col)
-    ;   Char = 'T' % فضای خالی
-    ->  true       % هیچ عملی انجام نمی‌شود
-    ;   writeln(['Unknown character:', Char, Row, Col]) % هشدار در صورت وجود کاراکتر نامعتبر
-    ),
-    NextCol is Col + 1,
-    sub_atom(Line, 1, Rest, _, NextLine),
-    process_line(NextLine, Row, NextCol).
+    string_length(Line, Length),
+    (   Col < Length
+    ->  sub_string(Line, Col, 1, _, Char),
+        (   Char = "B"
+        ->  set_bird_position(Row, Col)
+        ;   Char = "P"
+        ->  add_pig_position(Row, Col)
+        ;   Char = "R"
+        ->  add_rock_position(Row, Col)
+        ;   Char = "T" % فضای خالی
+        ->  true       % هیچ عملی انجام نمی‌شود
+        ;   writeln(['Unknown character:', Char, 'at row:', Row, 'col:', Col]) % هشدار در صورت وجود کاراکتر نامعتبر
+        ),
+        NextCol is Col + 1,
+        process_line(Line, Row, NextCol)
+    ;   true
+    ).
