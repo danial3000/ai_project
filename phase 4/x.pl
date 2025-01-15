@@ -66,10 +66,14 @@ bfs([[Current|Visited]|Rest], End, Seen, Path) :-
     bfs(NewQueue, End, [Current|Seen], Path).
 
 % بارگذاری اطلاعات از فایل متنی
-load_positions_from_file(simple.txt) :-
-    open(simple.txt, read, Stream),
-    load_positions(Stream, 0),
-    close(Stream).
+load_positions_from_file(FilePath) :-
+    catch(
+        (open(FilePath, read, Stream),
+         load_positions(Stream, 0),
+         close(Stream)),
+        Error,
+        (write('Error: '), writeln(Error))
+    ).
 
 load_positions(Stream, Row) :-
     read_line_to_string(Stream, Line),
@@ -89,7 +93,9 @@ process_line(Line, Row, Col) :-
     ->  add_pig_position(Row, Col)
     ;   Char = 'R'
     ->  add_rock_position(Row, Col)
-    ;   true
+    ;   Char = 'T' % فضای خالی
+    ->  true       % هیچ عملی انجام نمی‌شود
+    ;   writeln(['Unknown character:', Char, Row, Col]) % هشدار در صورت وجود کاراکتر نامعتبر
     ),
     NextCol is Col + 1,
     sub_atom(Line, 1, Rest, _, NextLine),
