@@ -1,14 +1,9 @@
-% قواعد و حقایق اولیه محیط بازی
-
-% قواعد دینامیک
 :- dynamic bird_position/2.
 :- dynamic pig_position/2.
 :- dynamic rock_position/2.
 
-% اندازه شبکه
 grid_size(8).
 
-% افزودن موقعیت پرنده
 set_bird_position(X, Y) :-
     retractall(bird_position(_, _)),
     assertz(bird_position(X, Y)).
@@ -22,10 +17,10 @@ add_rock_position(X, Y) :-
     assertz(rock_position(X, Y)).
 
 % حرکت‌های مجاز
-move(up, X, Y, X2, Y) :- X2 is X - 1, X2 >= 0.
-move(down, X, Y, X2, Y) :- grid_size(Size), X2 is X + 1, X2 < Size.
-move(left, X, Y, X, Y2) :- Y2 is Y - 1, Y2 >= 0.
-move(right, X, Y, X, Y2) :- grid_size(Size), Y2 is Y + 1, Y2 < Size.
+move(0, X, Y, X2, Y) :- X2 is X - 1, X2 >= 0.
+move(1, X, Y, X2, Y) :- grid_size(Size), X2 is X + 1, X2 < Size.
+move(2, X, Y, X, Y2) :- Y2 is Y - 1, Y2 >= 0.
+move(3, X, Y, X, Y2) :- grid_size(Size), Y2 is Y + 1, Y2 < Size.
 
 % بررسی موقعیت مجاز
 valid_position(X, Y) :-
@@ -50,12 +45,27 @@ solve((X, Y), [(PX, PY)|RemainingPigs], CurrentActions, FinalActions) :-
 
 % پیدا کردن مسیر به سمت خوک
 path_to_pig(Start, End, Path) :-
-    bfs([[Start]], End, [], Path).
+    bfs([[Start]], End, [], PathWithDirections),
+    extract_directions(PathWithDirections, Path).
 
+% استخراج جهت‌ها از مسیر
+extract_directions([_], []).
+extract_directions([(X1, Y1), (X2, Y2)|Rest], [Direction|Directions]) :-
+    direction((X1, Y1), (X2, Y2), Direction),
+    extract_directions([(X2, Y2)|Rest], Directions).
+
+% تعیین جهت حرکت بین دو موقعیت
+direction((X1, Y1), (X2, Y2), 0) :- X2 is X1 - 1, Y2 =:= Y1.
+direction((X1, Y1), (X2, Y2), 1) :- X2 is X1 + 1, Y2 =:= Y1.
+direction((X1, Y1), (X2, Y2), 2) :- Y2 is Y1 - 1, X2 =:= X1.
+direction((X1, Y1), (X2, Y2), 3) :- Y2 is Y1 + 1, X2 =:= X1.
+
+% الگوریتم BFS برای پیدا کردن مسیر
 bfs([[End|Visited]|_], End, _, Path) :-
     reverse([End|Visited], Path).
 
 bfs([[Current|Visited]|Rest], End, Seen, Path) :-
+    Current = (CurrentX, CurrentY),
     findall([Next, Current|Visited],
             (move(Direction, CurrentX, CurrentY, NextX, NextY),
              valid_position(NextX, NextY),
