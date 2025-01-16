@@ -1,4 +1,4 @@
-import torch
+import  torch
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
@@ -24,20 +24,7 @@ class DQLearning:
     def __init__(self, env, learning_rate=1e-1, discount_factor=0.99, epsilon_start=1.0,
                  epsilon_end=0.01, epsilon_decay_steps=5000, batch_size=64, memory_size=100000,
                  target_update_freq=1000):
-        """
-        Initializes the Deep Q-Learning agent.
 
-        Parameters:
-            env (UnknownAngryBirds): The environment.
-            learning_rate (float): Learning rate for the optimizer.
-            discount_factor (float): Discount factor for future rewards.
-            epsilon_start (float): Initial exploration rate.
-            epsilon_end (float): Minimum exploration rate.
-            epsilon_decay_steps (int): Number of steps over which epsilon decays.
-            batch_size (int): Size of mini-batches sampled from replay memory.
-            memory_size (int): Maximum size of the replay memory.
-            target_update_freq (int): Frequency (in steps) to update the target network.
-        """
         self.env = env
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
@@ -70,16 +57,7 @@ class DQLearning:
         self.step_count = 0
 
     def get_state_vector(self, grid, agent_position):
-        """
-        Converts the grid state into a flat vector suitable for the neural network.
 
-        Parameters:
-            grid (list of lists): 2D grid representing the environment.
-            agent_position (tuple): Agent's position (row, col).
-
-        Returns:
-            np.array: Flattened state vector with 64 elements.
-        """
         state_vector = []
         for i in range(len(grid)):
             for j in range(len(grid[0])):
@@ -102,15 +80,7 @@ class DQLearning:
         return np.array(state_vector, dtype=np.float32)
 
     def select_action(self, state_vector):
-        """
-        Selects an action using an epsilon-greedy strategy.
 
-        Parameters:
-            state_vector (np.array): The current state vector.
-
-        Returns:
-            int: Action index.
-        """
         if random.random() < self.epsilon:
             return random.randint(0, self.output_dim - 1)  # Explore: random action
         else:
@@ -120,40 +90,22 @@ class DQLearning:
             return torch.argmax(q_values).item()  # Exploit: best action
 
     def store_transition(self, state_vector, action, reward, next_state_vector, done):
-        """
-        Stores a transition in the replay buffer.
 
-        Parameters:
-            state_vector (np.array): Current state vector.
-            action (int): Action taken.
-            reward (float): Reward received.
-            next_state_vector (np.array): Next state vector.
-            done (bool): Whether the episode has ended.
-        """
         self.memory.append((state_vector, action, reward, next_state_vector, done))
 
     def sample_memory(self):
-        """
-        Samples a random mini-batch from the replay buffer.
 
-        Returns:
-            list: A list of sampled transitions.
-        """
         return random.sample(self.memory, self.batch_size)
 
     def update_epsilon(self):
-        """
-        Decays the exploration rate.
-        """
+
         if self.epsilon > self.epsilon_end:
             self.epsilon -= self.epsilon_decay_step
         else:
             self.epsilon = self.epsilon_end
 
     def update_q_network(self):
-        """
-        Samples a mini-batch from memory and performs a gradient descent step.
-        """
+
         if len(self.memory) < self.batch_size:
             return  # Not enough samples to train
 
@@ -196,12 +148,7 @@ class DQLearning:
             self.target_network.load_state_dict(self.q_network.state_dict())
 
     def train_episode(self):
-        """
-        Trains the agent for a single episode.
 
-        Returns:
-            float: Total reward obtained in the episode.
-        """
         agent_pos = self.env.reset()  # دریافت موقعیت ایجنت
         grid = self.env._UnknownAngryBirds__grid  # دسترسی به شبکه از طریق name mangling
         state_vector = self.get_state_vector(grid, agent_pos)
@@ -224,18 +171,7 @@ class DQLearning:
         return total_reward
 
     def explore(self, num_episodes, conv_patience=100, conv_epsilon=1e-3):
-        """
-        Trains the agent over multiple episodes.
 
-        Parameters:
-            num_episodes (int): Maximum number of training episodes.
-            conv_patience (int): Number of consecutive episodes with minimal variance to consider convergence.
-            conv_epsilon (float): Threshold for convergence based on variance.
-
-        Returns:
-            list: Rewards per episode.
-            list: Average rewards for convergence monitoring.
-        """
         rewards_per_episode = []
         recent_rewards = deque(maxlen=conv_patience)
         avg_rewards = []
@@ -258,13 +194,7 @@ class DQLearning:
         return rewards_per_episode, avg_rewards
 
     def set_policy(self):
-        """
-        Extracts the policy by selecting the action with the highest Q-value for each state.
-        به دلیل فضای بزرگ حالت، می‌توان از نمونه‌برداری یا تجمیع اقدامات برای نمایش استفاده کرد.
 
-        Returns:
-            dict: A dictionary mapping state configurations to actions.
-        """
         policy = {}
         grid_size = self.env._UnknownAngryBirds__grid_size
         for i in range(grid_size):
@@ -281,13 +211,7 @@ class DQLearning:
         return policy
 
     def plot_values_difference(self, rewards, avg_rewards):
-        """
-        Plots the rewards per episode and the average rewards over recent episodes.
 
-        Parameters:
-            rewards (list): List of rewards per episode.
-            avg_rewards (list): List of average rewards for convergence monitoring.
-        """
         import matplotlib.pyplot as plt
 
         plt.figure(figsize=(12, 6))
@@ -300,12 +224,7 @@ class DQLearning:
         plt.show()
 
     def plot_policy(self, policy):
-        """
-        Visualizes the policy on the grid.
 
-        Parameters:
-            policy (dict): A dictionary mapping state configurations to actions.
-        """
         import matplotlib.pyplot as plt
 
         grid_size = self.env._UnknownAngryBirds__grid_size
@@ -348,15 +267,7 @@ class DQLearning:
 
     @staticmethod
     def get_action_direction(action):
-        """
-        Maps action index to direction vectors for visualization.
 
-        Parameters:
-            action (int): Action index.
-
-        Returns:
-            tuple: Direction vector (dx, dy).
-        """
         action_mapping = {
             0: (0, -1),  # Up
             1: (0, 1),   # Down
@@ -366,12 +277,7 @@ class DQLearning:
         return action_mapping.get(action, (0, 0))
 
     def save_model(self, filepath):
-        """
-        Saves the Q-network and target network's state dictionaries.
 
-        Parameters:
-            filepath (str): Path to save the model.
-        """
         torch.save({
             'q_network_state_dict': self.q_network.state_dict(),
             'target_network_state_dict': self.target_network.state_dict(),
@@ -380,12 +286,7 @@ class DQLearning:
         print(f"Model saved to {filepath}")
 
     def load_model(self, filepath):
-        """
-        Loads the Q-network and target network's state dictionaries.
 
-        Parameters:
-            filepath (str): Path to load the model from.
-        """
         checkpoint = torch.load(filepath, map_location=self.device)
         self.q_network.load_state_dict(checkpoint['q_network_state_dict'])
         self.target_network.load_state_dict(checkpoint['target_network_state_dict'])
@@ -402,7 +303,7 @@ if __name__ == "__main__":
     dq_agent = DQLearning(
         env=env,
         learning_rate=1e-3,
-        discount_factor=0.99,
+        discount_factor=0.5,
         epsilon_start=1.0,
         epsilon_end=0.01,
         epsilon_decay_steps=5000,

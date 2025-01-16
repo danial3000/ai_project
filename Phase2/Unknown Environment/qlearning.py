@@ -5,9 +5,11 @@ from matplotlib.tri import Triangulation
 
 # for getting mode for policy map
 from scipy import stats
+from sklearn.model_selection import learning_curve
+
 
 class QLearning:
-    __action_mapping = {
+    action_mapping = {
         0: (0, 1),  # Up
         1: (0, -1),  # Down
         2: (-1, 0),  # Left
@@ -107,10 +109,10 @@ class QLearning:
             q_val_diff_series.append(value_diff)
 
             if total_rewards[-1] >= total_rewards[-2]:
-                self.epsilon_greedy *= self.decay_rate
+                self.epsilon_greedy = max(0.01, self.decay_rate * self.epsilon_greedy)
 
             if q_val_diff_series[-1] <= q_val_diff_series[-2]:
-                self.learning_rate *= self.decay_rate
+                self.learning_rate = max(0.001, self.learning_rate * self.decay_rate)
 
 
             if value_diff < conv_epsilon:
@@ -244,7 +246,7 @@ class QLearning:
         for i in range(self.dim):
             for j in range(self.dim):
                 action = int(stats.mode(policy[i, j, :])[0])
-                dx, dy = self.__action_mapping[action]
+                dx, dy = self.action_mapping[action]
                 arrow_length = 0.3  # Length of arrows
                 dx_norm = dx * arrow_length
                 dy_norm = dy * arrow_length

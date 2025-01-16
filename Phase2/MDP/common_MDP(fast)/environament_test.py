@@ -573,7 +573,7 @@ class AngryBirds:
 
 if __name__ == "__main__":
 
-    FPS = 100000
+    FPS = 8
     env = AngryBirds()
     screen, clock = PygameInit.initialization()
     state = env.reset()
