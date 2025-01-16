@@ -1,6 +1,6 @@
 [submodule "Phase4"]
 	path = Phase4
-	url = https://github.com/UIAI-4031/game-ravenclaw
+	url = https://github.com/UIAI-4031/first-order-logic-ravenclaw
 
 [submodule "Phase3"]
 	path = Phase3
