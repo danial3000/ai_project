@@ -1,0 +1,11 @@
+\contentsline {section}{\numberline {1}پرولوگ}{2}{section.1}%
+\contentsline {subsection}{\numberline {1.1} بارگذاری و تجزیه نقشه \lr {(Map Loading and Parsing)} }{2}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2} پردازش سلول‌ها \lr { (Cell Processing)} }{2}{subsection.1.2}%
+\contentsline {subsection}{\numberline {1.3}مدیریت وضعیت بازی \lr { (State Management)}}{2}{subsection.1.3}%
+\contentsline {subsection}{\numberline {1.4}تعریف حرکات \lr {(Movement Definition)}}{3}{subsection.1.4}%
+\contentsline {subsection}{\numberline {1.5}جستجوی مسیر بهینه (Pathfinding)}{3}{subsection.1.5}%
+\contentsline {subsection}{\numberline {1.6} تبدیل مسیر به اقدامات \lr {(Convert Path to Actions)} }{4}{subsection.1.6}%
+\contentsline {section}{\numberline {2}پایتون}{4}{section.2}%
+\contentsline {subsection}{\numberline {2.1} بارگذاری و اجرای کد پرولوگ \lr { (Prolog Integration)} }{4}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2} یافتن مسیر بهینه \lr {(Finding the Optimal Path)} }{5}{subsection.2.2}%
+\contentsline {section}{\numberline {3}اجرا روی نقشه‌ها}{5}{section.3}%
