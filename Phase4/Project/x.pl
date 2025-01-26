@@ -171,7 +171,7 @@ bfs([[Current|Visited]|Rest], End, Seen, Path) :-
              Next = (NextX, NextY),
              \+ member(Next, Seen)),
             NextPaths),
-    append(Rest, NextPaths, NewQueue),
+    append(NextPaths, Rest, NewQueue),
     bfs(NewQueue, End, [Current|Seen], Path).
 
 
