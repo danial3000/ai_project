@@ -1,47 +1,9 @@
-% Map loading and parsing
-read_map(File) :-
-    catch(
-        (open(File, read, Stream),
-         read_grid(Stream, 0),
-         close(Stream)),
-        Error,
-        (write('Error: '), writeln(Error))
-    ).
-
-read_grid(Stream, Row) :-
-    read_line_to_string(Stream, Line),
-    (   Line \= end_of_file
-    ->  process_line(Line, Row, 0),
-        NextRow is Row + 1,
-        read_grid(Stream, NextRow)
-    ;   true
-    ).
-
-% Process each line and character
-process_line("", _, _).
-process_line(Line, Row, Col) :-
-    string_length(Line, Len),
-    (   Col < Len
-    ->  sub_string(Line, Col, 1, _, Char),
-        process_cell(Char, Row, Col),
-        NextCol is Col + 1,
-        process_line(Line, Row, NextCol)
-    ;   true
-    ).
-
-% Cell processing
-process_cell("B", Row, Col) :- set_bird(Row, Col).
-process_cell("P", Row, Col) :- add_pig(Row, Col).
-process_cell("R", Row, Col) :- add_rock(Row, Col).
-process_cell("T", _, _) :- true. % Empty cell
-process_cell(Char, Row, Col) :-
-    writeln(['Unknown character:', Char, 'at row:', Row, 'col:', Col]).
-
 % Dynamic predicates for game state
 :- dynamic bird_pos/2.
 :- dynamic pig_pos/2.
 :- dynamic rock_pos/2.
 
+% Define the grid size
 grid_size(8).
 
 % State management
@@ -98,7 +60,6 @@ update_visited(Node, Cost, Visited, NewVisited) :-
     ;   NewVisited = Visited
     ).
 
-
 ucs_search([Cost-[End|Path]|_], End, _, [End|Path]).
 
 ucs_search([Cost-[Current|Path]|Queue], Goal, Visited, FinalPath) :-
@@ -116,7 +77,6 @@ ucs_search([Cost-[Current|Path]|Queue], Goal, Visited, FinalPath) :-
     keysort(UnsortedQueue, SortedQueue),
     update_visited(Current, Cost, Visited, NewVisited),
     ucs_search(SortedQueue, Goal, NewVisited, FinalPath).
-
 
 % Check if node exists in Visited with lower or equal cost
 member_cost(Node, NewCost, Visited) :-
