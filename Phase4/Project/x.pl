@@ -54,6 +54,7 @@ add_pig(X, Y) :-
     assertz(pig_pos(X, Y)).
 
 add_rock(X, Y) :-
+    \+ rock_pos(X, Y),
     assertz(rock_pos(X, Y)).
 
 
@@ -84,63 +85,78 @@ solve((X, Y), [(PX, PY)|RemainingPigs], CurrentActions, FinalActions) :-
     solve((PX, PY), RemainingPigs, NewActions, FinalActions).
 
 path_to_pig(Start, End, Path) :-
-    bfs([[Start]], End, [], PathWithDirections),
+    astar([[Start]], End, [], PathWithDirections),
     convert_path_to_actions(PathWithDirections, Path).
 
 
-% A* implementation
-astar(Start, Goal, Path) :-
-    manhattan_distance(Start, Goal, H),
-    astar_search([node(Start, [], 0, H)], Goal, [], Path).
+convert_path_to_actions([], []).
+convert_path_to_actions([_], []).
+convert_path_to_actions([(X1,Y1), (X2,Y2)|Rest], [ActionNum|Actions]) :-
+    get_direction_number((X1,Y1), (X2,Y2), ActionNum),
+    convert_path_to_actions([(X2,Y2)|Rest], Actions).
 
-astar_search([node(Goal, Path, _, _)|_], Goal, _, RevPath) :-
-    reverse([Goal|Path], RevPath).
 
-astar_search([node(Pos, Path, G, _)|Queue], Goal, Visited, FinalPath) :-
-    findall(node(NextPos, [Pos|Path], NewG, NewF),
-            (Pos = (X, Y),
-             move(_, X, Y, NX, NY),
-             NextPos = (NX, NY),
-             valid_pos(NX, NY),
-             \+ member(NextPos, Visited),
-             NewG is G + 1,
-             manhattan_distance(NextPos, Goal, H),
-             NewF is NewG + H),
-            NewNodes),
+% A* Search implementation
+astar([[Start]], End, _, Path) :-
+    heuristic(Start, End, H),
+    astar_search([ (H + 0)-(0, [Start]) ], End, [], RevPath),
+    reverse(RevPath, Path).
+
+astar_search([_-(_, [End|Visited])|_], End, _, [End|Visited]).
+
+astar_search([F-(G, [Current|Path])|Queue], Goal, Seen, FinalPath) :-
+    Current = (X, Y),
+    findall(
+        NewF-(NewG, [Next, Current|Path]),
+        (move(_, X, Y, NX, NY),
+         Next = (NX, NY),
+         valid_pos(NX, NY),
+         NewG is G + 1,
+         heuristic(Next, Goal, H),
+         NewF is NewG + H,
+         \+ member_seen(Next, NewG, Seen)), % Check if node exists with better cost
+        NewNodes
+    ),
     append(Queue, NewNodes, UnsortedQueue),
-    sort_queue(UnsortedQueue, SortedQueue),
-    astar_search(SortedQueue, Goal, [Pos|Visited], FinalPath).
+    keysort(UnsortedQueue, SortedQueue),
+    astar_search(SortedQueue, Goal, [Current-G|Seen], FinalPath).
 
-% Helper predicates
-manhattan_distance((X1, Y1), (X2, Y2), D) :-
-    D is abs(X2 - X1) + abs(Y2 - Y1).
+% Check if node exists in Seen with lower or equal cost (G)
+member_seen(Node, NewG, Seen) :-
+    member(Node-SeenG, Seen),
+    SeenG =< NewG.
 
-sort_queue(Queue, SortedQueue) :-
-    sort(2, @=<, Queue, SortedQueue).
-
-sort_queue_ucs(Queue, SortedQueue) :-
-    sort(2, @=<, Queue, SortedQueue).
+% Manhattan distance heuristic
+heuristic((X1, Y1), (X2, Y2), H) :-
+    H is abs(X1 - X2) + abs(Y1 - Y2).
 
 
 % Uniform Cost Search implementation
-ucs(Start, Goal, Path) :-
-    ucs_search([node(Start, [], 0)], Goal, [], Path).
+ucs([[Start]], End, _, Path) :-
+    ucs_search([0-[Start]], End, [], RevPath),
+    reverse(RevPath, Path).
 
-ucs_search([node(Goal, Path, _)|_], Goal, _, RevPath) :-
-    reverse([Goal|Path], RevPath).
+ucs_search([Cost-[End|Path]|_], End, _, [End|Path]).
 
-ucs_search([node(Pos, Path, Cost)|Queue], Goal, Visited, FinalPath) :-
-    findall(node(NextPos, [Pos|Path], NewCost),
-            (Pos = (X, Y),
-             move(_, X, Y, NX, NY),
-             NextPos = (NX, NY),
-             valid_pos(NX, NY),
-             \+ member(NextPos, Visited),
-             NewCost is Cost + 1),
-            NewNodes),
+ucs_search([Cost-[Current|Path]|Queue], Goal, Visited, FinalPath) :-
+    Current = (X, Y),
+    findall(
+        NewCost-[Next, Current|Path],
+        (move(_, X, Y, NX, NY),
+         Next = (NX, NY),
+         valid_pos(NX, NY),
+         NewCost is Cost + 1,
+         \+ member_cost(Next, NewCost, Visited)), % Check cost before adding
+        NewNodes
+    ),
     append(Queue, NewNodes, UnsortedQueue),
-    sort_queue_ucs(UnsortedQueue, SortedQueue),
-    ucs_search(SortedQueue, Goal, [Pos|Visited], FinalPath).
+    keysort(UnsortedQueue, SortedQueue),
+    ucs_search(SortedQueue, Goal, [Current-Cost|Visited], FinalPath).
+
+% Check if node exists in Visited with lower or equal cost
+member_cost(Node, NewCost, Visited) :-
+    member(Node-VisitedCost, Visited),
+    VisitedCost =< NewCost.
 
 
 % Breadth First Search implementation
@@ -158,12 +174,6 @@ bfs([[Current|Visited]|Rest], End, Seen, Path) :-
     append(Rest, NextPaths, NewQueue),
     bfs(NewQueue, End, [Current|Seen], Path).
 
-
-convert_path_to_actions([], []).
-convert_path_to_actions([_], []).
-convert_path_to_actions([(X1,Y1), (X2,Y2)|Rest], [ActionNum|Actions]) :-
-    get_direction_number((X1,Y1), (X2,Y2), ActionNum),
-    convert_path_to_actions([(X2,Y2)|Rest], Actions).
 
 % Predicate to get numeric direction
 get_direction_number((X1,Y1), (X2,Y2), Action) :-
