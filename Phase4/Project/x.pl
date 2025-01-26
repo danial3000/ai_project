@@ -57,7 +57,6 @@ add_rock(X, Y) :-
     \+ rock_pos(X, Y),
     assertz(rock_pos(X, Y)).
 
-
 % Movement definition
 move(up,    X, Y, X2, Y) :- X2 is X - 1, X2 >= 0.
 move(down,  X, Y, X2, Y) :- grid_size(S), X2 is X + 1, X2 < S.
@@ -71,70 +70,34 @@ valid_pos(X, Y) :-
     X >= 0, Y >= 0,
     X < S, Y < S.
 
-
 % Main solving predicates
 find_path(Actions) :-
     bird_pos(X, Y),
     findall((PX, PY), pig_pos(PX, PY), Pigs),
-    solve((X, Y), Pigs, [], Actions).
+    find_optimal_path((X, Y), Pigs, [], Actions).
 
-solve(_, [], Actions, Actions).
-solve((X, Y), [(PX, PY)|RemainingPigs], CurrentActions, FinalActions) :-
-    path_to_pig((X, Y), (PX, PY), Path),
-    append(CurrentActions, Path, NewActions),
-    solve((PX, PY), RemainingPigs, NewActions, FinalActions).
-
-path_to_pig(Start, End, Path) :-
-    astar([[Start]], End, [], PathWithDirections),
-    convert_path_to_actions(PathWithDirections, Path).
-
-
-convert_path_to_actions([], []).
-convert_path_to_actions([_], []).
-convert_path_to_actions([(X1,Y1), (X2,Y2)|Rest], [ActionNum|Actions]) :-
-    get_direction_number((X1,Y1), (X2,Y2), ActionNum),
-    convert_path_to_actions([(X2,Y2)|Rest], Actions).
-
-
-% A* Search implementation
-astar([[Start]], End, _, Path) :-
-    heuristic(Start, End, H),
-    astar_search([ (H + 0)-(0, [Start]) ], End, [], RevPath),
-    reverse(RevPath, Path).
-
-astar_search([_-(_, [End|Visited])|_], End, _, [End|Visited]).
-
-astar_search([F-(G, [Current|Path])|Queue], Goal, Seen, FinalPath) :-
-    Current = (X, Y),
-    findall(
-        NewF-(NewG, [Next, Current|Path]),
-        (move(_, X, Y, NX, NY),
-         Next = (NX, NY),
-         valid_pos(NX, NY),
-         NewG is G + 1,
-         heuristic(Next, Goal, H),
-         NewF is NewG + H,
-         \+ member_seen(Next, NewG, Seen)), % Check if node exists with better cost
-        NewNodes
-    ),
-    append(Queue, NewNodes, UnsortedQueue),
-    keysort(UnsortedQueue, SortedQueue),
-    astar_search(SortedQueue, Goal, [Current-G|Seen], FinalPath).
-
-% Check if node exists in Seen with lower or equal cost (G)
-member_seen(Node, NewG, Seen) :-
-    member(Node-SeenG, Seen),
-    SeenG =< NewG.
-
-% Manhattan distance heuristic
-heuristic((X1, Y1), (X2, Y2), H) :-
-    H is abs(X1 - X2) + abs(Y1 - Y2).
-
+% Find the optimal path considering all pigs
+find_optimal_path(_, [], Actions, Actions).
+find_optimal_path((X, Y), [(PX, PY)|RemainingPigs], CurrentActions, FinalActions) :-
+    ucs([[ (X, Y) ]], (PX, PY), [], Path),  % Find the shortest path to the current pig
+    convert_path_to_actions(Path, PathActions),
+    append(CurrentActions, PathActions, NewActions),
+    find_optimal_path((PX, PY), RemainingPigs, NewActions, FinalActions).
 
 % Uniform Cost Search implementation
 ucs([[Start]], End, _, Path) :-
     ucs_search([0-[Start]], End, [], RevPath),
     reverse(RevPath, Path).
+
+update_visited(Node, Cost, Visited, NewVisited) :-
+    (   member(Node-OldCost, Visited), OldCost > Cost
+    ->  select(Node-OldCost, Visited, TempVisited),
+        NewVisited = [Node-Cost | TempVisited]
+    ;   \+ member(Node-_, Visited)
+    ->  NewVisited = [Node-Cost | Visited]
+    ;   NewVisited = Visited
+    ).
+
 
 ucs_search([Cost-[End|Path]|_], End, _, [End|Path]).
 
@@ -145,35 +108,27 @@ ucs_search([Cost-[Current|Path]|Queue], Goal, Visited, FinalPath) :-
         (move(_, X, Y, NX, NY),
          Next = (NX, NY),
          valid_pos(NX, NY),
-         NewCost is Cost + 1,
-         \+ member_cost(Next, NewCost, Visited)), % Check cost before adding
+         NewCost is Cost + 1,  % Cost of each move is 1
+         \+ member_cost(Next, NewCost, Visited)),
         NewNodes
     ),
-    append(Queue, NewNodes, UnsortedQueue),
+    append(NewNodes, Queue, UnsortedQueue),
     keysort(UnsortedQueue, SortedQueue),
-    ucs_search(SortedQueue, Goal, [Current-Cost|Visited], FinalPath).
+    update_visited(Current, Cost, Visited, NewVisited),
+    ucs_search(SortedQueue, Goal, NewVisited, FinalPath).
+
 
 % Check if node exists in Visited with lower or equal cost
 member_cost(Node, NewCost, Visited) :-
     member(Node-VisitedCost, Visited),
-    VisitedCost =< NewCost.
+    VisitedCost < NewCost.
 
-
-% Breadth First Search implementation
-bfs([[End|Visited]|_], End, _, Path) :-
-    reverse([End|Visited], Path).
-
-bfs([[Current|Visited]|Rest], End, Seen, Path) :-
-    Current = (CurrentX, CurrentY),
-    findall([Next, Current|Visited],
-            (move(Direction, CurrentX, CurrentY, NextX, NextY),
-             valid_pos(NextX, NextY),
-             Next = (NextX, NextY),
-             \+ member(Next, Seen)),
-            NextPaths),
-    append(NextPaths, Rest, NewQueue),
-    bfs(NewQueue, End, [Current|Seen], Path).
-
+% Convert path to actions
+convert_path_to_actions([], []).
+convert_path_to_actions([_], []).
+convert_path_to_actions([(X1,Y1), (X2,Y2)|Rest], [ActionNum|Actions]) :-
+    get_direction_number((X1,Y1), (X2,Y2), ActionNum),
+    convert_path_to_actions([(X2,Y2)|Rest], Actions).
 
 % Predicate to get numeric direction
 get_direction_number((X1,Y1), (X2,Y2), Action) :-
